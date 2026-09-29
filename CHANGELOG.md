@@ -5,6 +5,31 @@ Every entry was checked with `tools/verify.py` before being committed.
 
 ---
 
+## Native build path — **verified** (correction)
+
+A previous entry claimed no ARM cross-compiler was available or reachable. **That was wrong.**
+The `ziglang` PyPI wheel provides one. Added `src/native/xzodomyx.c` and
+`tools/build_native.sh`, which build and verify a genuine `armeabi-v7a` shared object here
+(ELF32 / Machine ARM / EABI v5, matching `libminecraftpe.so`; only libdl symbols undefined).
+
+This changes the *reason* Features 4/5/6 are blocked, not the outcome:
+
+- **not** "cannot compile"
+- **is** (a) nothing built for ARM can be executed or tested in this container, and
+  (b) `MoveInputHandler` has no exported accessor or singleton — only its constructor — so
+  obtaining a live instance requires an **inline hook**, not a `dlsym` call. Untested inline
+  hooks into a C++ engine cannot honestly be claimed to satisfy "must never crash gameplay".
+
+`libxzodomyx.so` is a read-only `dlsym` probe: it installs no hooks, writes no memory and calls
+nothing in the engine. It is **not bundled into the APK**; the shipped APK is unchanged.
+
+Build verification caught a real defect during development: with `-fvisibility=hidden` the
+linker garbage-collected both entry points, producing a 988-byte object that passed every ELF
+check while exporting nothing. The script now fails unless `xzo_probe` and `JNI_OnLoad` are
+actually present.
+
+---
+
 ## Feature 2 — Always-on FPS counter · **working**
 
 Added `com.xzodomyx.Hud`.

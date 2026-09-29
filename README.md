@@ -7,9 +7,9 @@ Mod of **Minecraft: Pocket Edition 0.14.3** (ARM32 / `armeabi-v7a`, Android 5.0+
 | 1 | "XZO-Domyx PE" pre-launch screen | **working** — skin needs one in-game step ([why](docs/01-FEATURE-1-LAUNCHER.md)) |
 | 2 | Always-on FPS counter | **working**, not yet device-tested |
 | 3 | "Domyx" identity badge | **not feasible** on this build ([evidence](docs/03-FEATURES-3-6-FEASIBILITY.md)) |
-| 4 | Modern touch controls | **blocked** — needs an ARM toolchain |
-| 5 | QuickJS scripting bridge | **blocked** — needs an ARM toolchain |
-| 6 | Replay capture + offline re-render | **blocked** — needs an ARM toolchain; offline re-render unproven |
+| 4 | Modern touch controls | **blocked** — needs an inline hook + on-device testing |
+| 5 | QuickJS scripting bridge | **blocked** — no bionic libc; untestable hook surface |
+| 6 | Replay capture + offline re-render | **blocked** — untestable hook; offline re-render unproven |
 | 7 | GitHub repository | **working** |
 
 ## Build
@@ -67,6 +67,7 @@ Result: **1579 of 1581 stock APK entries are byte-for-byte identical**; only `cl
 | `repack.py` | raw-preserving repack + zipalign + v1 signing (pure Python) |
 | `ndis.py` | targeted ARM/Thumb disassembler for `libminecraftpe.so`, annotates literal loads |
 | `verify.py` | mechanical post-build checks |
+| `build_native.sh` | builds + verifies `armeabi-v7a` `libxzodomyx.so` via `zig cc` (not bundled) |
 
 ## Verification
 

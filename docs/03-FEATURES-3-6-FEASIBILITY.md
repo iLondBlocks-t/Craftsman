@@ -1,35 +1,75 @@
 # Features 3–6 — feasibility, with evidence
 
-Short version: **Features 3, 4, 5 and 6 cannot be implemented in this environment.** Three of them
-are blocked by a hard environmental limit, and Feature 3 is blocked by the game's own code — it
-would not work even with a full toolchain, in the form specified.
+Short version: **Features 3, 4, 5 and 6 cannot be implemented in this environment.**
+
+- **Feature 3** is blocked by the game's own code. It would not work on this build even with a
+  perfect toolchain and a rack of devices, in the form specified.
+- **Features 4, 5, 6** each need code running inside the game's process, reached through an
+  **inline hook** that this container can never execute even once. Cross-compiling is possible
+  (see the correction below); *validating* is not.
 
 I am reporting this rather than shipping something that looks like the feature and quietly does
 nothing, per the brief's instruction to say so plainly instead of silently downgrading.
 
 ---
 
-## The environmental blocker (Features 4, 5, 6)
+## CORRECTION to an earlier claim
 
-All three need **new ARM32 native code** in the process — either a new `.so` or inline hooks into
-`libminecraftpe.so`.
+An earlier revision of this document said *"no ARM cross-compiler is available and none is
+reachable."* **That was wrong, and I am correcting it rather than leaving it to stand.**
 
-There is **no ARM cross-compiler available and none is reachable**:
+The `ziglang` wheel on PyPI carries a full LLVM-based cross-compiler. `tools/build_native.sh`
+now builds a real `armeabi-v7a` shared object here and verifies it:
 
-- installed compilers: `gcc-12` for **x86_64 only**; no `arm-linux-androideabi-*`, no `clang`
-- `dl.google.com` (NDK) — blocked at the network level
-- `deb.debian.org` (`apt install gcc-arm-*`) — blocked
-- `api.adoptium.net`, Maven Central, `raw.githubusercontent.com`, and **all GitHub release
-  assets** (`objects.githubusercontent.com`) — blocked
-- PyPI/npm reachable, but neither carries an Android NDK or an ARM sysroot
-  (`pypi:android-ndk`, `npm:android-ndk`, `npm:ndk-build` → 404)
+```
+[ok] ELF32
+[ok] Machine: ARM
+[ok] ARM EABI version 5 (matches libminecraftpe.so)
+[ok] only libdl symbols are undefined
+[ok] exports xzo_probe, JNI_OnLoad
+size: 2524 bytes -> out/native/libxzodomyx.so
+```
 
-Even the existing toolchain had to be assembled from a JRE wheel and an npm-packaged apktool jar
-(see `docs/00-RECON.md` §6). A working ARM toolchain plus bionic sysroot is simply not obtainable
-here.
+So "cannot compile" is **not** the blocker. The real blockers are narrower and more specific, and
+they are described per-feature below. Two of them apply across Features 4, 5 and 6.
 
-This is an environment limitation, not a design dead end. Each feature below lists the exact
-symbols to target if you build it elsewhere with an NDK.
+### Real blocker 1 — no way to execute or test ARM code here
+
+This container is x86_64 with no KVM, no emulator, no `adb`, and no device. **Nothing built for
+ARM can be run, even once.**
+
+That matters because every remaining feature requires code running *inside the game's process*.
+The project's own reliability rule is that anything on the frame path or a background thread must
+never crash or freeze gameplay. Inline hooks into a C++ engine, shipped without a single
+execution, cannot honestly be claimed to meet that bar. An untested hook does not degrade
+gracefully — it segfaults on launch.
+
+### Real blocker 2 — the instance-pointer problem (no exported accessor)
+
+Calling the engine is easy: `libminecraftpe.so` exports 19,561 `GLOBAL FUNC`s, so a hook can
+resolve any of them by name with `dlsym` — no offsets, no pattern scanning, no fragility.
+
+Getting a `this` pointer to call them *on* is the hard part. I searched the symbol table for an
+accessor and there is none:
+
+```
+_ZN16MoveInputHandlerC1ER12InputHandlerRK7Options   0x00386875   <- constructor only
+```
+No `getMoveInputHandler`, no global singleton, no `sInstance`. The only way to obtain a live
+`MoveInputHandler*` is to **hook the constructor and capture `this`** — which means an inline
+trampoline (patching the function prologue, relocating displaced ARM/Thumb instructions), not a
+simple `dlsym` call. No hooking library (Dobby, Substrate) can be obtained and validated here
+either.
+
+Inline hooking + zero test capability is the combination that actually stops Features 4 and 6.
+
+### What was built instead
+
+`src/native/xzodomyx.c` + `tools/build_native.sh`: a tiny, **read-only** probe that `dlsym`s the
+exact symbols Features 4 and 6 would need and returns a bitmask of which resolved. It installs no
+hooks, writes no memory, and calls nothing in the engine, so it cannot perturb gameplay. It is
+deliberately **not bundled into the APK** — it exists so the next person can validate these
+assumptions on a real device before writing anything that runs every frame.
 
 ---
 
@@ -81,7 +121,7 @@ since any client can claim anything.
 
 ---
 
-## Feature 4 — Modern touch controls → **blocked, needs native**
+## Feature 4 — Modern touch controls → **blocked: instance pointer + no test capability**
 
 Confirmed finding A tells us the *widgets* must use `PopupWindow` + `setTouchInterceptor`. That
 part is fine and I could build it. The blocker is the other end: **there is no way to deliver the
@@ -106,7 +146,7 @@ What I checked:
 So a joystick could be drawn and tracked per-pointer in Java, and would be **unable to move the
 player**.
 
-**Target symbols if you build this with an NDK** (all exported, confirmed present):
+**Target symbols** (all exported, confirmed present, resolvable by `dlsym`):
 ```
 _ZN16MoveInputHandler17_updateMoveVectorEff    0x0035b839   (float x, float y)
 _ZN16MoveInputHandler17_updateButtonDownEPbb   0x0035b835   (bool*, bool)
@@ -117,16 +157,29 @@ _ZNK16MoveInputHandler15isMovingForwardEv      0x003866ed
 _ZN11LocalPlayer11setSneakingEb                0x003697e5
 ```
 `_updateMoveVector(float,float)` is exactly the analog movement axis the brief wants the joystick
-to feed, and `_updateButtonDown(bool*,bool)` is the press/release primitive for
-Attack/Build-style repeat with instant release. The hard part of the recon is done; only the
-compile step is missing.
+to feed, and `_updateButtonDown(bool*,bool)` is the press/release primitive for Attack/Build-style
+repeat with instant release.
+
+The recon is done and the compiler now exists. What remains is (a) an inline hook on
+`MoveInputHandlerC1` to capture the instance, and (b) on-device iteration. Neither is possible in
+this container. Note the Java half — `PopupWindow` + `setTouchInterceptor`, per-pointer-ID
+tracking, tight hit-boxes, texture swap — is fully buildable here; I have not shipped it because
+on-screen controls that cannot move the player are worse than none.
 
 ---
 
-## Feature 5 — Embedded QuickJS scripting bridge → **blocked, needs native**
+## Feature 5 — Embedded QuickJS scripting bridge → **blocked: no libc, no testable hook surface**
 
-QuickJS is C. It must be cross-compiled for `armeabi-v7a` and bound over JNI. No ARM compiler
-(above), so the engine cannot be produced.
+QuickJS is C, and cross-compiling it is now possible in principle. Two things still stop it.
+
+**No bionic libc.** QuickJS needs a real libc — `malloc`, `printf`, `math`. Zig ships musl, not
+bionic. Statically linking musl *inside* a library loaded into a bionic process means two
+allocators and two TLS models in one address space; that is a well-known way to get
+hard-to-diagnose corruption, and it is exactly the kind of thing that must be validated by
+running it. The probe above builds `-nostdlib` precisely because it needs no libc at all.
+
+**The hook surface is the actual product.** Even with the engine running, a ModPE-style API needs
+block/entity/level/tick hooks, which require the same inline hooking as Feature 4.
 
 A pure-Java engine (Rhino) would sidestep the compiler, but it would not be the feature: the
 useful half of a ModPE-style bridge is the **hook surface into the game**, and from Java the
@@ -140,7 +193,7 @@ comfortably inside the 100 MB ceiling (current build: 20.8 MB).
 
 ---
 
-## Feature 6 — Replay-style capture + offline re-render → **blocked, needs native**
+## Feature 6 — Replay-style capture + offline re-render → **blocked: unproven premise + no test capability**
 
 Per the brief, Step 0 had to establish two things before implementation. Results:
 
@@ -162,8 +215,8 @@ claim it.** The renderer is entangled with `MinecraftClient`, `Level` and the GL
 no headless or offscreen entry point visible in the symbol table. Answering this properly needs
 dynamic analysis on a device, which this environment cannot do.
 
-So Feature 6 is blocked twice: it needs native code that cannot be compiled here, **and** its core
-premise (offline re-render) is unverified. The brief explicitly said not to silently downgrade to
+So Feature 6 is blocked twice: intercepting the stream needs an inline hook that cannot be
+validated here, **and** its core premise (offline re-render) is unverified. The brief explicitly said not to silently downgrade to
 plain screen capture, so I have not built a screen recorder and labelled it a replay mod. Note
 also that the Record/Stop buttons would additionally need the `PopupWindow` + `setTouchInterceptor`
 treatment from finding A — but that is the easy part; the capture and re-render are the problem.
@@ -177,12 +230,13 @@ treatment from finding A — but that is the easy part; the capture and re-rende
 | 1 | Pre-launch screen | **working** | — (skin needs one in-game step, finding B) |
 | 2 | FPS counter | **working** (not device-tested) | — |
 | 3 | Domyx identity badge | **not feasible** | `filterValidUserName` strips the marker; rendering is native-only |
-| 4 | Modern touch controls | **blocked** | no ARM toolchain; no Java→native movement path |
-| 5 | QuickJS bridge | **blocked** | no ARM toolchain; no Java-reachable game hooks |
-| 6 | Replay capture/re-render | **blocked** | no ARM toolchain; offline re-render unproven |
+| 4 | Modern touch controls | **blocked** | no exported instance accessor → inline hook, untestable here |
+| 5 | QuickJS bridge | **blocked** | no bionic libc; hook surface needs the same inline hooking |
+| 6 | Replay capture/re-render | **blocked** | inline hook untestable; offline re-render unproven |
 | 7 | GitHub repo | **working** | — |
 
-To unblock 4, 5 and 6: build on a machine with the Android NDK (r16b or earlier for
-`armeabi-v7a` + API 21 comfort). The recon in this repo — exported symbols, addresses, the
-`ndis.py` disassembler, the confirmed hook points — carries straight over and is the part that
-usually takes longest.
+To unblock 4, 5 and 6 you need **a device or emulator in the loop**, plus the Android NDK for a
+bionic sysroot. The recon here — exported symbols, addresses, the `ndis.py` disassembler, the
+confirmed hook points, and the verified cross-compile setup — carries straight over and is
+normally the slowest part. The missing ingredient is the ability to run and iterate, not the
+ability to build.

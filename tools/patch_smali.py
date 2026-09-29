@@ -44,12 +44,15 @@ def main(dec_dir):
     for rel, label, old, new in EDITS:
         path = '%s/%s' % (dec_dir, rel)
         src = open(path).read()
-        n = src.count(old)
-        if n != 1:
-            sys.exit('!! anchor for %r matched %d times (expected 1) in %s' % (label, n, rel))
+        # Idempotency must be checked BEFORE the anchor assertion: applying an edit
+        # can consume its own anchor, so on a re-run over an existing build/dec the
+        # anchor legitimately matches zero times.
         if new.strip() in src:
             print('  = %s (already applied)' % label)
             continue
+        n = src.count(old)
+        if n != 1:
+            sys.exit('!! anchor for %r matched %d times (expected 1) in %s' % (label, n, rel))
         open(path, 'w').write(src.replace(old, new, 1))
         print('  + %s' % label)
 
