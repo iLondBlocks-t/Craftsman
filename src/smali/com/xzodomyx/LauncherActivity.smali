@@ -34,6 +34,12 @@
 
 .field private mWake:Landroid/widget/CheckBox;
 
+.field private mRec:Landroid/widget/CheckBox;
+
+.field private mProjCode:I
+
+.field private mProjData:Landroid/content/Intent;
+
 
 # direct methods
 .method public constructor <init>()V
@@ -516,6 +522,37 @@
 
     invoke-virtual {v7, v8}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
 
+    # Feature A: opt in to gameplay recording (asks for screen-capture consent)
+    new-instance v8, Landroid/widget/CheckBox;
+
+    invoke-direct {v8, p0}, Landroid/widget/CheckBox;-><init>(Landroid/content/Context;)V
+
+    const-string v9, "Enable gameplay recording (REC button in game)"
+
+    invoke-virtual {v8, v9}, Landroid/widget/CheckBox;->setText(Ljava/lang/CharSequence;)V
+
+    const v9, -0x19120d
+
+    invoke-virtual {v8, v9}, Landroid/widget/CheckBox;->setTextColor(I)V
+
+    invoke-direct {p0}, Lcom/xzodomyx/LauncherActivity;->prefs()Landroid/content/SharedPreferences;
+
+    move-result-object v9
+
+    const-string v10, "rec_enabled"
+
+    const/4 v11, 0x0
+
+    invoke-interface {v9, v10, v11}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z
+
+    move-result v9
+
+    invoke-virtual {v8, v9}, Landroid/widget/CheckBox;->setChecked(Z)V
+
+    iput-object v8, p0, Lcom/xzodomyx/LauncherActivity;->mRec:Landroid/widget/CheckBox;
+
+    invoke-virtual {v7, v8}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
+
     invoke-virtual {v2, v7}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
 
     # ---------- launch ----------
@@ -743,6 +780,40 @@
 
     if-eq p1, v0, :cond_ours
 
+    goto :cond_proj_req
+
+    :cond_proj_req
+    const/16 v0, 0x106a
+
+    if-ne p1, v0, :cond_ours
+
+    const/4 v0, -0x1
+
+    if-ne p2, v0, :cond_denied
+
+    if-eqz p3, :cond_denied
+
+    iput p2, p0, Lcom/xzodomyx/LauncherActivity;->mProjCode:I
+
+    iput-object p3, p0, Lcom/xzodomyx/LauncherActivity;->mProjData:Landroid/content/Intent;
+
+    invoke-direct {p0}, Lcom/xzodomyx/LauncherActivity;->doLaunch()V
+
+    return-void
+
+    :cond_denied
+    # consent refused: untick and launch normally rather than blocking the game
+    iget-object v0, p0, Lcom/xzodomyx/LauncherActivity;->mRec:Landroid/widget/CheckBox;
+
+    if-eqz v0, :cond_dl
+
+    const/4 v1, 0x0
+
+    invoke-virtual {v0, v1}, Landroid/widget/CheckBox;->setChecked(Z)V
+
+    :cond_dl
+    invoke-direct {p0}, Lcom/xzodomyx/LauncherActivity;->doLaunch()V
+
     return-void
 
     :cond_ours
@@ -964,6 +1035,54 @@
 .method private doLaunch()V
     .locals 6
 
+    # Feature A: screen-capture consent must be granted by the USER, and can only
+    # be requested from a normal Activity -- so we ask here, on the launcher, and
+    # forward the grant to MainActivity as an Intent extra. That keeps the game's
+    # own onActivityResult completely untouched.
+    :try_start_2
+    iget-object v0, p0, Lcom/xzodomyx/LauncherActivity;->mRec:Landroid/widget/CheckBox;
+
+    if-eqz v0, :cond_noask
+
+    invoke-virtual {v0}, Landroid/widget/CheckBox;->isChecked()Z
+
+    move-result v0
+
+    if-eqz v0, :cond_noask
+
+    iget-object v0, p0, Lcom/xzodomyx/LauncherActivity;->mProjData:Landroid/content/Intent;
+
+    if-nez v0, :cond_noask
+
+    sget v0, Landroid/os/Build$VERSION;->SDK_INT:I
+
+    const/16 v1, 0x15
+
+    if-lt v0, v1, :cond_noask
+
+    const-string v0, "media_projection"
+
+    invoke-virtual {p0, v0}, Lcom/xzodomyx/LauncherActivity;->getSystemService(Ljava/lang/String;)Ljava/lang/Object;
+
+    move-result-object v0
+
+    check-cast v0, Landroid/media/projection/MediaProjectionManager;
+
+    invoke-virtual {v0}, Landroid/media/projection/MediaProjectionManager;->createScreenCaptureIntent()Landroid/content/Intent;
+
+    move-result-object v0
+
+    const/16 v1, 0x106a
+
+    invoke-virtual {p0, v0, v1}, Lcom/xzodomyx/LauncherActivity;->startActivityForResult(Landroid/content/Intent;I)V
+
+    return-void
+
+    :cond_noask
+    :try_end_2
+    .catch Ljava/lang/Throwable; {:try_start_2 .. :try_end_2} :catch_2
+
+    :goto_2
     # persist our own settings (our SharedPreferences, never the game's)
     :try_start_0
     iget-object v0, p0, Lcom/xzodomyx/LauncherActivity;->mUser:Landroid/widget/EditText;
@@ -1009,6 +1128,18 @@
     const-string v2, "keep_awake"
 
     iget-object v3, p0, Lcom/xzodomyx/LauncherActivity;->mWake:Landroid/widget/CheckBox;
+
+    invoke-virtual {v3}, Landroid/widget/CheckBox;->isChecked()Z
+
+    move-result v3
+
+    invoke-interface {v1, v2, v3}, Landroid/content/SharedPreferences$Editor;->putBoolean(Ljava/lang/String;Z)Landroid/content/SharedPreferences$Editor;
+
+    move-result-object v1
+
+    const-string v2, "rec_enabled"
+
+    iget-object v3, p0, Lcom/xzodomyx/LauncherActivity;->mRec:Landroid/widget/CheckBox;
 
     invoke-virtual {v3}, Landroid/widget/CheckBox;->isChecked()Z
 
@@ -1111,6 +1242,21 @@
 
     invoke-direct {v3, p0, v4}, Landroid/content/Intent;-><init>(Landroid/content/Context;Ljava/lang/Class;)V
 
+    iget-object v4, p0, Lcom/xzodomyx/LauncherActivity;->mProjData:Landroid/content/Intent;
+
+    if-eqz v4, :cond_noproj
+
+    const-string v5, "xzo_proj_code"
+
+    iget v0, p0, Lcom/xzodomyx/LauncherActivity;->mProjCode:I
+
+    invoke-virtual {v3, v5, v0}, Landroid/content/Intent;->putExtra(Ljava/lang/String;I)Landroid/content/Intent;
+
+    const-string v5, "xzo_proj_data"
+
+    invoke-virtual {v3, v5, v4}, Landroid/content/Intent;->putExtra(Ljava/lang/String;Landroid/os/Parcelable;)Landroid/content/Intent;
+
+    :cond_noproj
     invoke-virtual {p0, v3}, Lcom/xzodomyx/LauncherActivity;->startActivity(Landroid/content/Intent;)V
     :try_end_1
     .catch Ljava/lang/Throwable; {:try_start_1 .. :try_end_1} :catch_1
@@ -1119,6 +1265,11 @@
     invoke-virtual {p0}, Lcom/xzodomyx/LauncherActivity;->finish()V
 
     return-void
+
+    :catch_2
+    move-exception v0
+
+    goto :goto_2
 .end method
 
 .method private static sanitize(Ljava/lang/String;)Ljava/lang/String;

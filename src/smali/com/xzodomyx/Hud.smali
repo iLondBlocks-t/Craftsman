@@ -23,6 +23,8 @@
 
 
 # static fields
+.field static sActivity:Landroid/app/Activity;
+
 .field static sAnchor:Landroid/view/View;
 
 .field static sFrames:I
@@ -36,6 +38,10 @@
 .field static sSelf:Lcom/xzodomyx/Hud;
 
 .field static sText:Lcom/xzodomyx/FpsView;
+
+.field static sRecPopup:Landroid/widget/PopupWindow;
+
+.field static sRecBtn:Lcom/xzodomyx/RecButton;
 
 
 # direct methods
@@ -83,7 +89,47 @@
 
     invoke-virtual {v1, v2}, Landroid/view/Window;->addFlags(I)V
 
+    sput-object p0, Lcom/xzodomyx/Hud;->sActivity:Landroid/app/Activity;
+
     :cond_nowake
+    # ---- Feature A: hand the MediaProjection consent captured by the launcher
+    # ---- to the recorder, and put the REC button on screen.
+    :try_start_1
+    invoke-virtual {p0}, Landroid/app/Activity;->getIntent()Landroid/content/Intent;
+
+    move-result-object v3
+
+    if-eqz v3, :cond_norec
+
+    const-string v4, "xzo_proj_code"
+
+    const/4 v5, 0x0
+
+    invoke-virtual {v3, v4, v5}, Landroid/content/Intent;->getIntExtra(Ljava/lang/String;I)I
+
+    move-result v4
+
+    const-string v5, "xzo_proj_data"
+
+    invoke-virtual {v3, v5}, Landroid/content/Intent;->getParcelableExtra(Ljava/lang/String;)Landroid/os/Parcelable;
+
+    move-result-object v5
+
+    instance-of v6, v5, Landroid/content/Intent;
+
+    if-eqz v6, :cond_norec
+
+    check-cast v5, Landroid/content/Intent;
+
+    invoke-static {v4, v5}, Lcom/xzodomyx/Rec;->setProjection(ILandroid/content/Intent;)V
+
+    invoke-static {p0}, Lcom/xzodomyx/Hud;->buildRec(Landroid/app/Activity;)V
+
+    :cond_norec
+    :try_end_1
+    .catch Ljava/lang/Throwable; {:try_start_1 .. :try_end_1} :catch_1
+
+    :goto_rec
     const-string v1, "fps_counter"
 
     const/4 v2, 0x0
@@ -176,6 +222,141 @@
     move-exception v0
 
     return-void
+
+    :catch_1
+    move-exception v3
+
+    goto :goto_rec
+.end method
+
+.method static buildRec(Landroid/app/Activity;)V
+    .locals 6
+
+    :try_start_0
+    sget-object v0, Lcom/xzodomyx/Hud;->sRecPopup:Landroid/widget/PopupWindow;
+
+    if-nez v0, :cond_out
+
+    new-instance v1, Lcom/xzodomyx/RecButton;
+
+    invoke-direct {v1, p0}, Lcom/xzodomyx/RecButton;-><init>(Landroid/content/Context;)V
+
+    new-instance v2, Landroid/widget/PopupWindow;
+
+    const/4 v3, -0x2               # WRAP_CONTENT: window == icon, tight hit-box
+
+    invoke-direct {v2, v1, v3, v3}, Landroid/widget/PopupWindow;-><init>(Landroid/view/View;II)V
+
+    const/4 v4, 0x1
+
+    invoke-virtual {v2, v4}, Landroid/widget/PopupWindow;->setTouchable(Z)V
+
+    const/4 v5, 0x0
+
+    invoke-virtual {v2, v5}, Landroid/widget/PopupWindow;->setFocusable(Z)V
+
+    invoke-virtual {v2, v5}, Landroid/widget/PopupWindow;->setOutsideTouchable(Z)V
+
+    invoke-virtual {v2, v5}, Landroid/widget/PopupWindow;->setClippingEnabled(Z)V
+
+    sput-object v2, Lcom/xzodomyx/Hud;->sRecPopup:Landroid/widget/PopupWindow;
+
+    sput-object v1, Lcom/xzodomyx/Hud;->sRecBtn:Lcom/xzodomyx/RecButton;
+
+    invoke-static {}, Lcom/xzodomyx/Hud;->showRec()V
+
+    :cond_out
+    :try_end_0
+    .catch Ljava/lang/Throwable; {:try_start_0 .. :try_end_0} :catch_0
+
+    return-void
+
+    :catch_0
+    move-exception v0
+
+    return-void
+.end method
+
+.method public static showRec()V
+    .locals 5
+
+    :try_start_0
+    sget-object v0, Lcom/xzodomyx/Hud;->sRecPopup:Landroid/widget/PopupWindow;
+
+    if-eqz v0, :cond_out
+
+    invoke-virtual {v0}, Landroid/widget/PopupWindow;->isShowing()Z
+
+    move-result v1
+
+    if-nez v1, :cond_out
+
+    sget-object v1, Lcom/xzodomyx/Hud;->sAnchor:Landroid/view/View;
+
+    if-eqz v1, :cond_out
+
+    const/16 v2, 0x35              # TOP | RIGHT
+
+    sget v3, Lcom/xzodomyx/Hud;->sMargin:I
+
+    mul-int/lit8 v4, v3, 0x2
+
+    invoke-virtual {v0, v1, v2, v4, v4}, Landroid/widget/PopupWindow;->showAtLocation(Landroid/view/View;III)V
+
+    :cond_out
+    :try_end_0
+    .catch Ljava/lang/Throwable; {:try_start_0 .. :try_end_0} :catch_0
+
+    return-void
+
+    :catch_0
+    move-exception v0
+
+    return-void
+.end method
+
+.method public static onRecTapped()V
+    .locals 3
+
+    :try_start_0
+    invoke-static {}, Lcom/xzodomyx/Rec;->isRecording()Z
+
+    move-result v0
+
+    if-eqz v0, :cond_start
+
+    invoke-static {}, Lcom/xzodomyx/Rec;->stop()V
+
+    return-void
+
+    :cond_start
+    sget-object v1, Lcom/xzodomyx/Hud;->sActivity:Landroid/app/Activity;
+
+    if-eqz v1, :cond_out
+
+    invoke-static {v1}, Lcom/xzodomyx/Rec;->start(Landroid/app/Activity;)Z
+
+    move-result v2
+
+    if-eqz v2, :cond_out
+
+    # hide our own button so it is NOT part of the captured video
+    sget-object v0, Lcom/xzodomyx/Hud;->sRecPopup:Landroid/widget/PopupWindow;
+
+    if-eqz v0, :cond_out
+
+    invoke-virtual {v0}, Landroid/widget/PopupWindow;->dismiss()V
+
+    :cond_out
+    :try_end_0
+    .catch Ljava/lang/Throwable; {:try_start_0 .. :try_end_0} :catch_0
+
+    return-void
+
+    :catch_0
+    move-exception v0
+
+    return-void
 .end method
 
 .method public static detach()V
@@ -209,7 +390,27 @@
     .catch Ljava/lang/Throwable; {:try_start_1 .. :try_end_1} :catch_1
 
     :goto_1
+    :try_start_2
+    invoke-static {}, Lcom/xzodomyx/Rec;->stop()V
+
+    sget-object v0, Lcom/xzodomyx/Hud;->sRecPopup:Landroid/widget/PopupWindow;
+
+    if-eqz v0, :cond_c
+
+    invoke-virtual {v0}, Landroid/widget/PopupWindow;->dismiss()V
+
+    :cond_c
+    :try_end_2
+    .catch Ljava/lang/Throwable; {:try_start_2 .. :try_end_2} :catch_2
+
+    :goto_2
     const/4 v0, 0x0
+
+    sput-object v0, Lcom/xzodomyx/Hud;->sRecPopup:Landroid/widget/PopupWindow;
+
+    sput-object v0, Lcom/xzodomyx/Hud;->sRecBtn:Lcom/xzodomyx/RecButton;
+
+    sput-object v0, Lcom/xzodomyx/Hud;->sActivity:Landroid/app/Activity;
 
     sput-object v0, Lcom/xzodomyx/Hud;->sPopup:Landroid/widget/PopupWindow;
 
@@ -238,6 +439,11 @@
     move-exception v0
 
     goto :goto_1
+
+    :catch_2
+    move-exception v0
+
+    goto :goto_2
 .end method
 
 

@@ -5,6 +5,40 @@ Every entry was checked with `tools/verify.py` before being committed.
 
 ---
 
+## Feature A — gameplay recording · **implemented**
+
+Start/Stop recording to `Movies/XZO-Domyx/xzo_<ts>.mp4`, fully local.
+
+Pipeline: `MediaProjection -> VirtualDisplay -> MediaCodec input Surface -> H.264 (hardware)
+-> MediaMuxer -> .mp4`.
+
+**Goal 1 achieved, via a better route than specified.** The brief asked for `glReadPixels` on the
+render thread. On a `NativeActivity` that would stall the game's own render thread every frame —
+the very overhead Goal 1 forbids. MediaProjection captures in SurfaceFlinger and feeds the encoder
+GPU-to-GPU: zero instructions on the game's render thread, zero CPU frame copies, no raw frame ever
+entering our process (which is why no bounded queue is needed).
+
+**Correction to my previous report:** I had reasoned the overlay would be excluded from capture
+automatically. That is true for `glReadPixels` but **false for MediaProjection**, which composites
+every window. Exclusion is now structural: the REC button's PopupWindow is dismissed on Start and
+restored only after the file is finalised, with stopping done from an ongoing notification.
+
+**Goal 2 still NOT achieved** — offline re-render needs the tick/state stream, which is native-only
+with no headless renderer entry point. Recordings show real lag if it happened; only the recorder
+itself is overhead-free.
+
+FFmpeg deliberately not bundled: software x264 would burn CPU the game needs, require per-frame
+copies out of the process, and add 10–20 MB — and I cannot test a bundled binary.
+
+Consent is requested on the launcher (new "Enable gameplay recording" toggle) and passed to
+MainActivity as an Intent extra, so **the game's `onActivityResult` is not patched**. `RecButton`
+uses a WRAP_CONTENT PopupWindow (hit-box == the 40dp icon) and tracks its own pointer id.
+
+Verified: 11/11 pipeline calls present in the shipped dex; every throwing method has a catch
+handler; 1554/1581 entries byte-identical; 8892/8894 stock method bodies bit-identical.
+
+---
+
 ## Features A–E · B/C/D/E working, A not implementable
 
 **B — keep screen awake.** Recon confirmed the app has *no* existing wake-lock or

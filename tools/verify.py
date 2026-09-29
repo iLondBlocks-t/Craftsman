@@ -126,7 +126,8 @@ if removed:
 else:
     ok('no stock classes removed (%d intact)' % len(ca))
 EXPECTED_NEW = {'Lcom/xzodomyx/LauncherActivity;', 'Lcom/xzodomyx/Hud;',
-                'Lcom/xzodomyx/FpsView;'}
+                'Lcom/xzodomyx/FpsView;', 'Lcom/xzodomyx/Rec;',
+                'Lcom/xzodomyx/Rec$1;', 'Lcom/xzodomyx/RecButton;'}
 if added == EXPECTED_NEW:
     ok('added exactly: %s' % sorted(added))
 else:

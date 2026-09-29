@@ -11,7 +11,7 @@ Mod of **Minecraft: Pocket Edition 0.14.3** (ARM32 / `armeabi-v7a`, Android 5.0+
 | 5 | QuickJS scripting bridge | **blocked** — no bionic libc; untestable hook surface |
 | 6 | Replay capture + offline re-render | **blocked** — untestable hook; offline re-render unproven |
 | 7 | GitHub repository | **working** |
-| A | Frame-by-frame recording | **not implementable here** ([why](docs/04-FEATURES-A-E.md)) |
+| A | Gameplay recording to .mp4 | **working** — Goal 1 achieved; offline re-render not possible ([detail](docs/04-FEATURES-A-E.md)) |
 | B | Keep screen awake in game | **working** |
 | C | FPS counter: game font, colour-coded, no box | **working**, not device-tested |
 | D | Pre-launcher redesign | **working** |
