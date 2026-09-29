@@ -5,6 +5,47 @@ Every entry was checked with `tools/verify.py` before being committed.
 
 ---
 
+## Features A–E · B/C/D/E working, A not implementable
+
+**B — keep screen awake.** Recon confirmed the app has *no* existing wake-lock or
+`KEEP_SCREEN_ON` logic, so there was nothing to conflict with. `FLAG_KEEP_SCREEN_ON` is applied
+on the gameplay window, now on by default and toggleable.
+
+**C — real FPS counter.** New `com.xzodomyx.FpsView` blits the game's **own** bitmap font
+(`assets/images/font/default8.png`, 16×16 grid of 8×8 glyphs) — no external font asset. No
+background box; 1px drop-shadow on the glyphs only. Colour-coded <30 red / 30–50 yellow / >50
+green. True measured framerate from `Choreographer`, rolling 1s window. Nearest-neighbour,
+allocation-free on the frame path.
+
+**D — pre-launcher redesign.** Gradient backdrop, elevated card with USERNAME/SKIN/OPTIONS
+sections, rounded field, `StateListDrawable` pressed states, 450ms fade-and-rise entrance, and
+the wordmark drawn in Minecraft's own bitmap font. All drawables built in code — `resources.arsc`
+stays stock.
+
+**E — menu restyle, texture-only (safe approach).** 25 chrome textures in `gui/newgui/`
+recoloured by luminance→palette remap with alpha copied through, so dimensions, 9-slice geometry
+and bevels are preserved and only hue changes. World/server list content, status dots and
+scrollbars deliberately left stock (listed with reasons in `retexture.py`).
+**Scoped down on purpose:** layout/geometry/click-regions were *not* restructured, because those
+screens are laid out by the native engine and changing them risks mismatched hit-boxes. Colours
+changed; behaviour byte-identical. Zero perf cost — verified identical pixel dimensions.
+
+**A — frame-by-frame recording: NOT implementable here.** Recon found real machinery —
+`RenderContextOGL::captureScreenAsRGB`, and `MainActivity.saveScreenshot(String,int,int,int[])`
+which native already calls **with real framebuffer pixels**. But the full Java→native surface is
+28 JNI exports and **none triggers a capture**: Java can receive a frame it did not ask for and
+cannot ask for one. Per-frame capture therefore needs a PLT hook on `eglSwapBuffers` (imported,
+confirmed) running on the native render thread — untestable in this container, and an untested
+hook on the frame path violates the "never destabilise the game" rule.
+**Goal 1 not shipped; Goal 2 not achieved and not achievable on this build** (packet stream is
+native-only, and no headless renderer entry point exists). Start/Stop exclusion from capture is
+*reasoned* (PopupWindow is a separate surface, not in the GL framebuffer) — not measured.
+
+Verification: 1554/1581 entries byte-identical, 25 textures dimension-checked, 8892/8894 stock
+method bodies bit-identical.
+
+---
+
 ## Native build path — **verified** (correction)
 
 A previous entry claimed no ARM cross-compiler was available or reachable. **That was wrong.**

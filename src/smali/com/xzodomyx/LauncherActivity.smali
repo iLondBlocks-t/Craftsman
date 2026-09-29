@@ -97,266 +97,517 @@
     return-void
 .end method
 
-.method private buildUi()V
-    .locals 9
+.method private rounded(IIII)Landroid/graphics/drawable/GradientDrawable;
+    .locals 2
 
-    const/16 v0, 0x10
+    new-instance v0, Landroid/graphics/drawable/GradientDrawable;
+
+    invoke-direct {v0}, Landroid/graphics/drawable/GradientDrawable;-><init>()V
+
+    invoke-virtual {v0, p1}, Landroid/graphics/drawable/GradientDrawable;->setColor(I)V
+
+    int-to-float v1, p2
+
+    invoke-virtual {v0, v1}, Landroid/graphics/drawable/GradientDrawable;->setCornerRadius(F)V
+
+    if-lez p4, :cond_0
+
+    invoke-virtual {v0, p4, p3}, Landroid/graphics/drawable/GradientDrawable;->setStroke(II)V
+
+    :cond_0
+    return-object v0
+.end method
+
+.method private styleBtn(Landroid/widget/Button;III)V
+    .locals 7
+
+    const/16 v0, 0x8
 
     invoke-direct {p0, v0}, Lcom/xzodomyx/LauncherActivity;->dp(I)I
 
     move-result v0
 
-    # root vertical column
-    new-instance v1, Landroid/widget/LinearLayout;
+    new-instance v1, Landroid/graphics/drawable/StateListDrawable;
 
-    invoke-direct {v1, p0}, Landroid/widget/LinearLayout;-><init>(Landroid/content/Context;)V
+    invoke-direct {v1}, Landroid/graphics/drawable/StateListDrawable;-><init>()V
 
-    const/4 v2, 0x1
-
-    invoke-virtual {v1, v2}, Landroid/widget/LinearLayout;->setOrientation(I)V
-
-    invoke-virtual {v1, v0, v0, v0, v0}, Landroid/widget/LinearLayout;->setPadding(IIII)V
-
-    const v2, -0xefebe8
-
-    invoke-virtual {v1, v2}, Landroid/widget/LinearLayout;->setBackgroundColor(I)V
-
-    # title
-    new-instance v2, Landroid/widget/TextView;
-
-    invoke-direct {v2, p0}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V
-
-    const-string v3, "XZO-Domyx PE"
-
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
-
-    const/high16 v3, 0x41d00000    # 26.0f
-
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setTextSize(F)V
-
-    const v3, -0x812cdf
-
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setTextColor(I)V
+    const/4 v2, 0x0
 
     const/4 v3, 0x1
 
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setGravity(I)V
+    new-array v4, v3, [I
 
-    invoke-virtual {v1, v2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
+    sget v5, Landroid/R$attr;->state_pressed:I
 
-    # subtitle
-    new-instance v2, Landroid/widget/TextView;
+    aput v5, v4, v2
 
-    invoke-direct {v2, p0}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V
+    invoke-direct {p0, p3, v0, v2, v2}, Lcom/xzodomyx/LauncherActivity;->rounded(IIII)Landroid/graphics/drawable/GradientDrawable;
 
-    const-string v3, "Minecraft: Pocket Edition 0.14.3"
+    move-result-object v6
 
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
+    invoke-virtual {v1, v4, v6}, Landroid/graphics/drawable/StateListDrawable;->addState([ILandroid/graphics/drawable/Drawable;)V
 
-    const/high16 v3, 0x41400000    # 12.0f
+    new-array v4, v2, [I
 
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setTextSize(F)V
+    invoke-direct {p0, p2, v0, v2, v2}, Lcom/xzodomyx/LauncherActivity;->rounded(IIII)Landroid/graphics/drawable/GradientDrawable;
 
-    const v3, -0x7f7f80
+    move-result-object v6
 
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setTextColor(I)V
+    invoke-virtual {v1, v4, v6}, Landroid/graphics/drawable/StateListDrawable;->addState([ILandroid/graphics/drawable/Drawable;)V
+
+    invoke-virtual {p1, v1}, Landroid/widget/Button;->setBackgroundDrawable(Landroid/graphics/drawable/Drawable;)V
+
+    invoke-virtual {p1, p4}, Landroid/widget/Button;->setTextColor(I)V
+
+    const/16 v5, 0xe
+
+    invoke-direct {p0, v5}, Lcom/xzodomyx/LauncherActivity;->dp(I)I
+
+    move-result v5
+
+    invoke-virtual {p1, v5, v5, v5, v5}, Landroid/widget/Button;->setPadding(IIII)V
+
+    return-void
+.end method
+
+.method private label(Ljava/lang/String;)Landroid/widget/TextView;
+    .locals 3
+
+    new-instance v0, Landroid/widget/TextView;
+
+    invoke-direct {v0, p0}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V
+
+    invoke-virtual {v0, p1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
+
+    const/high16 v1, 0x41200000
+
+    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setTextSize(F)V
+
+    const v1, -0x756458
+
+    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setTextColor(I)V
+
+    const/16 v2, 0x8
+
+    invoke-direct {p0, v2}, Lcom/xzodomyx/LauncherActivity;->dp(I)I
+
+    move-result v2
+
+    const/4 v1, 0x0
+
+    invoke-virtual {v0, v1, v2, v1, v1}, Landroid/widget/TextView;->setPadding(IIII)V
+
+    return-object v0
+.end method
+
+.method private buildUi()V
+    .locals 14
+
+    const/16 v0, 0x14
+
+    invoke-direct {p0, v0}, Lcom/xzodomyx/LauncherActivity;->dp(I)I
+
+    move-result v0
+
+    const/16 v1, 0xa
+
+    invoke-direct {p0, v1}, Lcom/xzodomyx/LauncherActivity;->dp(I)I
+
+    move-result v1
+
+    # ---------- root column, diagonal gradient ----------
+    new-instance v2, Landroid/widget/LinearLayout;
+
+    invoke-direct {v2, p0}, Landroid/widget/LinearLayout;-><init>(Landroid/content/Context;)V
 
     const/4 v3, 0x1
 
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setGravity(I)V
+    invoke-virtual {v2, v3}, Landroid/widget/LinearLayout;->setOrientation(I)V
 
-    const/4 v4, 0x0
+    invoke-virtual {v2, v3}, Landroid/widget/LinearLayout;->setGravity(I)V
 
-    invoke-virtual {v2, v4, v4, v4, v0}, Landroid/widget/TextView;->setPadding(IIII)V
+    invoke-virtual {v2, v0, v0, v0, v0}, Landroid/widget/LinearLayout;->setPadding(IIII)V
 
-    invoke-virtual {v1, v2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
+    new-instance v4, Landroid/graphics/drawable/GradientDrawable;
 
-    # username label
-    new-instance v2, Landroid/widget/TextView;
+    sget-object v5, Landroid/graphics/drawable/GradientDrawable$Orientation;->TL_BR:Landroid/graphics/drawable/GradientDrawable$Orientation;
 
-    invoke-direct {v2, p0}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V
+    const/4 v6, 0x2
 
-    const-string v3, "Username"
+    new-array v6, v6, [I
 
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
+    const/4 v7, 0x0
 
-    const v3, -0x333334
+    const v8, -0xf4ede0
 
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setTextColor(I)V
+    aput v8, v6, v7
 
-    invoke-virtual {v1, v2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
+    const v8, -0xefd5de
 
-    # username field, prefilled from our own prefs
-    new-instance v2, Landroid/widget/EditText;
+    aput v8, v6, v3
 
-    invoke-direct {v2, p0}, Landroid/widget/EditText;-><init>(Landroid/content/Context;)V
+    invoke-direct {v4, v5, v6}, Landroid/graphics/drawable/GradientDrawable;-><init>(Landroid/graphics/drawable/GradientDrawable$Orientation;[I)V
 
-    const/4 v3, 0x1
+    invoke-virtual {v2, v4}, Landroid/widget/LinearLayout;->setBackgroundDrawable(Landroid/graphics/drawable/Drawable;)V
 
-    invoke-virtual {v2, v3}, Landroid/widget/EditText;->setSingleLine(Z)V
+    # ---------- wordmark, drawn in the GAME'S OWN bitmap font ----------
+    new-instance v4, Lcom/xzodomyx/FpsView;
 
-    const-string v3, "Steve"
+    invoke-direct {v4, p0}, Lcom/xzodomyx/FpsView;-><init>(Landroid/content/Context;)V
 
-    invoke-virtual {v2, v3}, Landroid/widget/EditText;->setHint(Ljava/lang/CharSequence;)V
+    const-string v5, "XZO-DOMYX PE"
+
+    const v6, -0x812cdf
+
+    invoke-virtual {v4, v5, v6}, Lcom/xzodomyx/FpsView;->setLabel(Ljava/lang/String;I)V
+
+    const/4 v5, 0x3
+
+    invoke-direct {p0, v5}, Lcom/xzodomyx/LauncherActivity;->dp(I)I
+
+    move-result v5
+
+    invoke-virtual {v4, v5}, Lcom/xzodomyx/FpsView;->setPixelScale(I)V
+
+    invoke-virtual {v2, v4}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
+
+    # ---------- subtitle ----------
+    new-instance v4, Landroid/widget/TextView;
+
+    invoke-direct {v4, p0}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V
+
+    const-string v5, "Minecraft: Pocket Edition 0.14.3"
+
+    invoke-virtual {v4, v5}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
+
+    const/high16 v5, 0x41400000
+
+    invoke-virtual {v4, v5}, Landroid/widget/TextView;->setTextSize(F)V
+
+    const v5, -0x756458
+
+    invoke-virtual {v4, v5}, Landroid/widget/TextView;->setTextColor(I)V
+
+    invoke-virtual {v4, v3}, Landroid/widget/TextView;->setGravity(I)V
+
+    invoke-virtual {v4, v7, v1, v7, v0}, Landroid/widget/TextView;->setPadding(IIII)V
+
+    invoke-virtual {v2, v4}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
+
+    # ---------- card ----------
+    new-instance v7, Landroid/widget/LinearLayout;
+
+    invoke-direct {v7, p0}, Landroid/widget/LinearLayout;-><init>(Landroid/content/Context;)V
+
+    invoke-virtual {v7, v3}, Landroid/widget/LinearLayout;->setOrientation(I)V
+
+    invoke-virtual {v7, v0, v0, v0, v0}, Landroid/widget/LinearLayout;->setPadding(IIII)V
+
+    const v8, -0x19ede5da
+
+    const v9, -0xe0a5bc
+
+    invoke-direct {p0, v3}, Lcom/xzodomyx/LauncherActivity;->dp(I)I
+
+    move-result v10
+
+    invoke-direct {p0, v8, v1, v9, v10}, Lcom/xzodomyx/LauncherActivity;->rounded(IIII)Landroid/graphics/drawable/GradientDrawable;
+
+    move-result-object v8
+
+    invoke-virtual {v7, v8}, Landroid/widget/LinearLayout;->setBackgroundDrawable(Landroid/graphics/drawable/Drawable;)V
+
+    # username label + field
+    const-string v8, "USERNAME"
+
+    invoke-direct {p0, v8}, Lcom/xzodomyx/LauncherActivity;->label(Ljava/lang/String;)Landroid/widget/TextView;
+
+    move-result-object v8
+
+    invoke-virtual {v7, v8}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
+
+    new-instance v8, Landroid/widget/EditText;
+
+    invoke-direct {v8, p0}, Landroid/widget/EditText;-><init>(Landroid/content/Context;)V
+
+    invoke-virtual {v8, v3}, Landroid/widget/EditText;->setSingleLine(Z)V
+
+    const-string v9, "Steve"
+
+    invoke-virtual {v8, v9}, Landroid/widget/EditText;->setHint(Ljava/lang/CharSequence;)V
+
+    const v9, -0x756458
+
+    invoke-virtual {v8, v9}, Landroid/widget/EditText;->setHintTextColor(I)V
+
+    const v9, -0x19120d
+
+    invoke-virtual {v8, v9}, Landroid/widget/EditText;->setTextColor(I)V
+
+    const v9, -0xf1e9de
+
+    const v10, -0xd8bfa6
+
+    invoke-direct {p0, v3}, Lcom/xzodomyx/LauncherActivity;->dp(I)I
+
+    move-result v11
+
+    const/4 v12, 0x6
+
+    invoke-direct {p0, v12}, Lcom/xzodomyx/LauncherActivity;->dp(I)I
+
+    move-result v12
+
+    invoke-direct {p0, v9, v12, v10, v11}, Lcom/xzodomyx/LauncherActivity;->rounded(IIII)Landroid/graphics/drawable/GradientDrawable;
+
+    move-result-object v9
+
+    invoke-virtual {v8, v9}, Landroid/widget/EditText;->setBackgroundDrawable(Landroid/graphics/drawable/Drawable;)V
+
+    const/16 v9, 0xc
+
+    invoke-direct {p0, v9}, Lcom/xzodomyx/LauncherActivity;->dp(I)I
+
+    move-result v9
+
+    invoke-virtual {v8, v9, v9, v9, v9}, Landroid/widget/EditText;->setPadding(IIII)V
 
     invoke-direct {p0}, Lcom/xzodomyx/LauncherActivity;->prefs()Landroid/content/SharedPreferences;
 
-    move-result-object v3
+    move-result-object v9
 
-    const-string v4, "username"
+    const-string v10, "username"
 
-    const-string v5, ""
+    const-string v11, ""
 
-    invoke-interface {v3, v4, v5}, Landroid/content/SharedPreferences;->getString(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+    invoke-interface {v9, v10, v11}, Landroid/content/SharedPreferences;->getString(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 
-    move-result-object v3
+    move-result-object v9
 
-    invoke-virtual {v2, v3}, Landroid/widget/EditText;->setText(Ljava/lang/CharSequence;)V
+    invoke-virtual {v8, v9}, Landroid/widget/EditText;->setText(Ljava/lang/CharSequence;)V
 
-    iput-object v2, p0, Lcom/xzodomyx/LauncherActivity;->mUser:Landroid/widget/EditText;
+    iput-object v8, p0, Lcom/xzodomyx/LauncherActivity;->mUser:Landroid/widget/EditText;
 
-    invoke-virtual {v1, v2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
+    invoke-virtual {v7, v8}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
 
-    # skin button
-    new-instance v2, Landroid/widget/Button;
+    # skin section
+    const-string v8, "SKIN"
 
-    invoke-direct {v2, p0}, Landroid/widget/Button;-><init>(Landroid/content/Context;)V
+    invoke-direct {p0, v8}, Lcom/xzodomyx/LauncherActivity;->label(Ljava/lang/String;)Landroid/widget/TextView;
 
-    const-string v3, "Choose / Upload Skin"
+    move-result-object v8
 
-    invoke-virtual {v2, v3}, Landroid/widget/Button;->setText(Ljava/lang/CharSequence;)V
+    invoke-virtual {v7, v8}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
 
-    invoke-virtual {v2, p0}, Landroid/widget/Button;->setOnClickListener(Landroid/view/View$OnClickListener;)V
+    new-instance v8, Landroid/widget/Button;
 
-    iput-object v2, p0, Lcom/xzodomyx/LauncherActivity;->mSkinBtn:Landroid/widget/Button;
+    invoke-direct {v8, p0}, Landroid/widget/Button;-><init>(Landroid/content/Context;)V
 
-    invoke-virtual {v1, v2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
+    const-string v9, "Choose / Upload Skin"
 
-    # status line
-    new-instance v2, Landroid/widget/TextView;
+    invoke-virtual {v8, v9}, Landroid/widget/Button;->setText(Ljava/lang/CharSequence;)V
 
-    invoke-direct {v2, p0}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V
+    const v9, -0xe494b6
 
-    const/high16 v3, 0x41400000    # 12.0f
+    const v10, -0xebaec6
 
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setTextSize(F)V
+    const v11, -0x19120d
 
-    const v3, -0x7f7f80
+    invoke-direct {p0, v8, v9, v10, v11}, Lcom/xzodomyx/LauncherActivity;->styleBtn(Landroid/widget/Button;III)V
 
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setTextColor(I)V
+    invoke-virtual {v8, p0}, Landroid/widget/Button;->setOnClickListener(Landroid/view/View$OnClickListener;)V
 
-    iput-object v2, p0, Lcom/xzodomyx/LauncherActivity;->mStatus:Landroid/widget/TextView;
+    iput-object v8, p0, Lcom/xzodomyx/LauncherActivity;->mSkinBtn:Landroid/widget/Button;
 
-    invoke-virtual {v1, v2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
+    invoke-virtual {v7, v8}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
+
+    new-instance v8, Landroid/widget/TextView;
+
+    invoke-direct {v8, p0}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V
+
+    const/high16 v9, 0x41200000
+
+    invoke-virtual {v8, v9}, Landroid/widget/TextView;->setTextSize(F)V
+
+    const v9, -0x756458
+
+    invoke-virtual {v8, v9}, Landroid/widget/TextView;->setTextColor(I)V
+
+    const/4 v9, 0x0
+
+    invoke-direct {p0, v3}, Lcom/xzodomyx/LauncherActivity;->dp(I)I
+
+    move-result v10
+
+    mul-int/lit8 v10, v10, 0x6
+
+    invoke-virtual {v8, v9, v10, v9, v9}, Landroid/widget/TextView;->setPadding(IIII)V
+
+    iput-object v8, p0, Lcom/xzodomyx/LauncherActivity;->mStatus:Landroid/widget/TextView;
+
+    invoke-virtual {v7, v8}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
 
     invoke-direct {p0}, Lcom/xzodomyx/LauncherActivity;->refreshSkinStatus()V
 
     # toggles
-    new-instance v2, Landroid/widget/CheckBox;
+    const-string v8, "OPTIONS"
 
-    invoke-direct {v2, p0}, Landroid/widget/CheckBox;-><init>(Landroid/content/Context;)V
+    invoke-direct {p0, v8}, Lcom/xzodomyx/LauncherActivity;->label(Ljava/lang/String;)Landroid/widget/TextView;
 
-    const-string v3, "Show FPS counter in game"
+    move-result-object v8
 
-    invoke-virtual {v2, v3}, Landroid/widget/CheckBox;->setText(Ljava/lang/CharSequence;)V
+    invoke-virtual {v7, v8}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
 
-    const v3, -0x333334
+    new-instance v8, Landroid/widget/CheckBox;
 
-    invoke-virtual {v2, v3}, Landroid/widget/CheckBox;->setTextColor(I)V
+    invoke-direct {v8, p0}, Landroid/widget/CheckBox;-><init>(Landroid/content/Context;)V
 
-    invoke-direct {p0}, Lcom/xzodomyx/LauncherActivity;->prefs()Landroid/content/SharedPreferences;
+    const-string v9, "Show FPS counter in game"
 
-    move-result-object v3
+    invoke-virtual {v8, v9}, Landroid/widget/CheckBox;->setText(Ljava/lang/CharSequence;)V
 
-    const-string v4, "fps_counter"
+    const v9, -0x19120d
 
-    const/4 v5, 0x0
-
-    invoke-interface {v3, v4, v5}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z
-
-    move-result v3
-
-    invoke-virtual {v2, v3}, Landroid/widget/CheckBox;->setChecked(Z)V
-
-    iput-object v2, p0, Lcom/xzodomyx/LauncherActivity;->mFps:Landroid/widget/CheckBox;
-
-    invoke-virtual {v1, v2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
-
-    new-instance v2, Landroid/widget/CheckBox;
-
-    invoke-direct {v2, p0}, Landroid/widget/CheckBox;-><init>(Landroid/content/Context;)V
-
-    const-string v3, "Keep screen awake"
-
-    invoke-virtual {v2, v3}, Landroid/widget/CheckBox;->setText(Ljava/lang/CharSequence;)V
-
-    const v3, -0x333334
-
-    invoke-virtual {v2, v3}, Landroid/widget/CheckBox;->setTextColor(I)V
+    invoke-virtual {v8, v9}, Landroid/widget/CheckBox;->setTextColor(I)V
 
     invoke-direct {p0}, Lcom/xzodomyx/LauncherActivity;->prefs()Landroid/content/SharedPreferences;
 
-    move-result-object v3
+    move-result-object v9
 
-    const-string v4, "keep_awake"
+    const-string v10, "fps_counter"
 
-    const/4 v5, 0x0
+    const/4 v11, 0x0
 
-    invoke-interface {v3, v4, v5}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z
+    invoke-interface {v9, v10, v11}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z
 
-    move-result v3
+    move-result v9
 
-    invoke-virtual {v2, v3}, Landroid/widget/CheckBox;->setChecked(Z)V
+    invoke-virtual {v8, v9}, Landroid/widget/CheckBox;->setChecked(Z)V
 
-    iput-object v2, p0, Lcom/xzodomyx/LauncherActivity;->mWake:Landroid/widget/CheckBox;
+    iput-object v8, p0, Lcom/xzodomyx/LauncherActivity;->mFps:Landroid/widget/CheckBox;
 
-    invoke-virtual {v1, v2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
+    invoke-virtual {v7, v8}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
 
-    # launch button
-    new-instance v2, Landroid/widget/Button;
+    new-instance v8, Landroid/widget/CheckBox;
 
-    invoke-direct {v2, p0}, Landroid/widget/Button;-><init>(Landroid/content/Context;)V
+    invoke-direct {v8, p0}, Landroid/widget/CheckBox;-><init>(Landroid/content/Context;)V
 
-    const-string v3, "LAUNCH"
+    const-string v9, "Keep screen awake"
 
-    invoke-virtual {v2, v3}, Landroid/widget/Button;->setText(Ljava/lang/CharSequence;)V
+    invoke-virtual {v8, v9}, Landroid/widget/CheckBox;->setText(Ljava/lang/CharSequence;)V
 
-    invoke-virtual {v2, p0}, Landroid/widget/Button;->setOnClickListener(Landroid/view/View$OnClickListener;)V
+    const v9, -0x19120d
 
-    iput-object v2, p0, Lcom/xzodomyx/LauncherActivity;->mLaunchBtn:Landroid/widget/Button;
+    invoke-virtual {v8, v9}, Landroid/widget/CheckBox;->setTextColor(I)V
 
-    new-instance v3, Landroid/widget/LinearLayout$LayoutParams;
+    invoke-direct {p0}, Lcom/xzodomyx/LauncherActivity;->prefs()Landroid/content/SharedPreferences;
 
-    const/4 v4, -0x1
+    move-result-object v9
 
-    const/4 v5, -0x2
+    const-string v10, "keep_awake"
 
-    invoke-direct {v3, v4, v5}, Landroid/widget/LinearLayout$LayoutParams;-><init>(II)V
+    invoke-interface {v9, v10, v3}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z
 
-    const/16 v4, 0x18
+    move-result v9
 
-    invoke-direct {p0, v4}, Lcom/xzodomyx/LauncherActivity;->dp(I)I
+    invoke-virtual {v8, v9}, Landroid/widget/CheckBox;->setChecked(Z)V
 
-    move-result v4
+    iput-object v8, p0, Lcom/xzodomyx/LauncherActivity;->mWake:Landroid/widget/CheckBox;
 
-    const/4 v5, 0x0
+    invoke-virtual {v7, v8}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
 
-    invoke-virtual {v3, v5, v4, v5, v5}, Landroid/widget/LinearLayout$LayoutParams;->setMargins(IIII)V
+    invoke-virtual {v2, v7}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
 
-    invoke-virtual {v1, v2, v3}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V
+    # ---------- launch ----------
+    new-instance v8, Landroid/widget/Button;
 
-    # scrollable so it fits small portrait screens
-    new-instance v6, Landroid/widget/ScrollView;
+    invoke-direct {v8, p0}, Landroid/widget/Button;-><init>(Landroid/content/Context;)V
 
-    invoke-direct {v6, p0}, Landroid/widget/ScrollView;-><init>(Landroid/content/Context;)V
+    const-string v9, "LAUNCH"
 
-    const v7, -0xefebe8
+    invoke-virtual {v8, v9}, Landroid/widget/Button;->setText(Ljava/lang/CharSequence;)V
 
-    invoke-virtual {v6, v7}, Landroid/widget/ScrollView;->setBackgroundColor(I)V
+    const v9, -0x812cdf
 
-    invoke-virtual {v6, v1}, Landroid/widget/ScrollView;->addView(Landroid/view/View;)V
+    const v10, -0x944ce4
 
-    invoke-virtual {p0, v6}, Lcom/xzodomyx/LauncherActivity;->setContentView(Landroid/view/View;)V
+    const v11, -0xf4ede0
+
+    invoke-direct {p0, v8, v9, v10, v11}, Lcom/xzodomyx/LauncherActivity;->styleBtn(Landroid/widget/Button;III)V
+
+    invoke-virtual {v8, p0}, Landroid/widget/Button;->setOnClickListener(Landroid/view/View$OnClickListener;)V
+
+    iput-object v8, p0, Lcom/xzodomyx/LauncherActivity;->mLaunchBtn:Landroid/widget/Button;
+
+    new-instance v9, Landroid/widget/LinearLayout$LayoutParams;
+
+    const/4 v10, -0x1
+
+    const/4 v11, -0x2
+
+    invoke-direct {v9, v10, v11}, Landroid/widget/LinearLayout$LayoutParams;-><init>(II)V
+
+    const/4 v10, 0x0
+
+    invoke-virtual {v9, v10, v0, v10, v10}, Landroid/widget/LinearLayout$LayoutParams;->setMargins(IIII)V
+
+    invoke-virtual {v2, v8, v9}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V
+
+    # ---------- entrance motion (launcher only; no bearing on in-game FPS) ----------
+    const/4 v9, 0x0
+
+    int-to-float v9, v9
+
+    invoke-virtual {v7, v9}, Landroid/widget/LinearLayout;->setAlpha(F)V
+
+    const/16 v9, 0x18
+
+    invoke-direct {p0, v9}, Lcom/xzodomyx/LauncherActivity;->dp(I)I
+
+    move-result v9
+
+    int-to-float v9, v9
+
+    invoke-virtual {v7, v9}, Landroid/widget/LinearLayout;->setTranslationY(F)V
+
+    invoke-virtual {v7}, Landroid/widget/LinearLayout;->animate()Landroid/view/ViewPropertyAnimator;
+
+    move-result-object v10
+
+    const/high16 v9, 0x3f800000
+
+    invoke-virtual {v10, v9}, Landroid/view/ViewPropertyAnimator;->alpha(F)Landroid/view/ViewPropertyAnimator;
+
+    move-result-object v10
+
+    const/4 v9, 0x0
+
+    int-to-float v9, v9
+
+    invoke-virtual {v10, v9}, Landroid/view/ViewPropertyAnimator;->translationY(F)Landroid/view/ViewPropertyAnimator;
+
+    move-result-object v10
+
+    const-wide/16 v12, 0x1c2
+
+    invoke-virtual {v10, v12, v13}, Landroid/view/ViewPropertyAnimator;->setDuration(J)Landroid/view/ViewPropertyAnimator;
+
+    move-result-object v10
+
+    invoke-virtual {v10}, Landroid/view/ViewPropertyAnimator;->start()V
+
+    # ---------- scroll host ----------
+    new-instance v11, Landroid/widget/ScrollView;
+
+    invoke-direct {v11, p0}, Landroid/widget/ScrollView;-><init>(Landroid/content/Context;)V
+
+    const v9, -0xf4ede0
+
+    invoke-virtual {v11, v9}, Landroid/widget/ScrollView;->setBackgroundColor(I)V
+
+    invoke-virtual {v11, v2}, Landroid/widget/ScrollView;->addView(Landroid/view/View;)V
+
+    invoke-virtual {p0, v11}, Lcom/xzodomyx/LauncherActivity;->setContentView(Landroid/view/View;)V
 
     return-void
 .end method

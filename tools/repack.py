@@ -196,6 +196,7 @@ def main():
     ap.add_argument('--manifest', required=True)
     ap.add_argument('--out', required=True)
     ap.add_argument('--keystore', default='xzodomyx.p12')
+    ap.add_argument('--override', help='dir whose files replace same-named APK entries')
     a = ap.parse_args()
 
     entries = read_zip(a.base)
@@ -203,6 +204,18 @@ def main():
 
     new_dex = open(a.dex, 'rb').read()
     new_mf = open(a.manifest, 'rb').read()
+
+    # Feature E: texture-only overrides, keyed by exact APK entry name.
+    overrides = {}
+    if a.override and os.path.isdir(a.override):
+        for root, _d, files in os.walk(a.override):
+            for fn in files:
+                full = os.path.join(root, fn)
+                rel = os.path.relpath(full, a.override).replace(os.sep, '/')
+                if rel == 'MANIFEST.txt':
+                    continue
+                overrides[rel.encode()] = open(full, 'rb').read()
+        print('  * %d texture override(s) loaded' % len(overrides))
 
     out, replaced, dropped = [], [], 0
     for e in entries:
@@ -215,6 +228,9 @@ def main():
         elif e.name == b'AndroidManifest.xml':
             out.append(make_entry('AndroidManifest.xml', new_mf, e.method))
             replaced.append('AndroidManifest.xml')
+        elif e.name in overrides:
+            out.append(make_entry(e.name.decode(), overrides[e.name], e.method))
+            replaced.append(e.name.decode())
         else:
             out.append(e)                      # raw bytes, untouched
     print('  * replaced: %s' % ', '.join(replaced))

@@ -11,6 +11,11 @@ Mod of **Minecraft: Pocket Edition 0.14.3** (ARM32 / `armeabi-v7a`, Android 5.0+
 | 5 | QuickJS scripting bridge | **blocked** — no bionic libc; untestable hook surface |
 | 6 | Replay capture + offline re-render | **blocked** — untestable hook; offline re-render unproven |
 | 7 | GitHub repository | **working** |
+| A | Frame-by-frame recording | **not implementable here** ([why](docs/04-FEATURES-A-E.md)) |
+| B | Keep screen awake in game | **working** |
+| C | FPS counter: game font, colour-coded, no box | **working**, not device-tested |
+| D | Pre-launcher redesign | **working** |
+| E | Menu restyle (texture-only, safe) | **working** |
 
 ## Build
 
@@ -52,8 +57,9 @@ apktool b           harvest classes.dex
   repack.py         substitute 2 entries, copy 1579 raw, zipalign, v1-sign
 ```
 
-Result: **1579 of 1581 stock APK entries are byte-for-byte identical**; only `classes.dex` and
-`AndroidManifest.xml` change. `libminecraftpe.so` is **never patched**.
+Result: **1554 of 1581 stock APK entries are byte-for-byte identical**; only `classes.dex`,
+`AndroidManifest.xml` and 25 deliberately restyled GUI textures change (each keeping its exact
+stock dimensions). `libminecraftpe.so` is **never patched**.
 
 ### `tools/`
 
@@ -67,6 +73,7 @@ Result: **1579 of 1581 stock APK entries are byte-for-byte identical**; only `cl
 | `repack.py` | raw-preserving repack + zipalign + v1 signing (pure Python) |
 | `ndis.py` | targeted ARM/Thumb disassembler for `libminecraftpe.so`, annotates literal loads |
 | `verify.py` | mechanical post-build checks |
+| `retexture.py` | Feature E: luminance→palette recolour of menu chrome, alpha/size preserved |
 | `build_native.sh` | builds + verifies `armeabi-v7a` `libxzodomyx.so` via `zig cc` (not bundled) |
 
 ## Verification
@@ -104,6 +111,7 @@ the game's own Skins screen.** This is a documented limitation, not automatic sk
 - [`docs/01-FEATURE-1-LAUNCHER.md`](docs/01-FEATURE-1-LAUNCHER.md)
 - [`docs/02-FEATURE-2-FPS.md`](docs/02-FEATURE-2-FPS.md)
 - [`docs/03-FEATURES-3-6-FEASIBILITY.md`](docs/03-FEATURES-3-6-FEASIBILITY.md)
+- [`docs/04-FEATURES-A-E.md`](docs/04-FEATURES-A-E.md) — recording, wake-lock, FPS font, redesign, retexture
 
 ## Legal
 

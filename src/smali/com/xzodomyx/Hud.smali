@@ -35,7 +35,7 @@
 
 .field static sSelf:Lcom/xzodomyx/Hud;
 
-.field static sText:Landroid/widget/TextView;
+.field static sText:Lcom/xzodomyx/FpsView;
 
 
 # direct methods
@@ -67,7 +67,7 @@
     # behaviour is untouched unless the user ticks it.
     const-string v1, "keep_awake"
 
-    const/4 v2, 0x0
+    const/4 v2, 0x1
 
     invoke-interface {v0, v1, v2}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z
 
@@ -113,29 +113,10 @@
 
     sput v1, Lcom/xzodomyx/Hud;->sMargin:I
 
-    new-instance v2, Landroid/widget/TextView;
+    # Feature C: the game's own bitmap font, no background plate
+    new-instance v2, Lcom/xzodomyx/FpsView;
 
-    invoke-direct {v2, p0}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V
-
-    const-string v3, "FPS --"
-
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
-
-    const/high16 v3, 0x41600000    # 14.0f
-
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setTextSize(F)V
-
-    const v3, -0x100               # 0xFFFFFF00 yellow
-
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setTextColor(I)V
-
-    const v3, 0x60000000           # translucent black plate, keeps it legible
-
-    invoke-virtual {v2, v3}, Landroid/widget/TextView;->setBackgroundColor(I)V
-
-    sget v3, Lcom/xzodomyx/Hud;->sMargin:I
-
-    invoke-virtual {v2, v3, v3, v3, v3}, Landroid/widget/TextView;->setPadding(IIII)V
+    invoke-direct {v2, p0}, Lcom/xzodomyx/FpsView;-><init>(Landroid/content/Context;)V
 
     new-instance v3, Landroid/widget/PopupWindow;
 
@@ -156,7 +137,7 @@
 
     sput-object v3, Lcom/xzodomyx/Hud;->sPopup:Landroid/widget/PopupWindow;
 
-    sput-object v2, Lcom/xzodomyx/Hud;->sText:Landroid/widget/TextView;
+    sput-object v2, Lcom/xzodomyx/Hud;->sText:Lcom/xzodomyx/FpsView;
 
     const/4 v5, 0x0
 
@@ -232,7 +213,7 @@
 
     sput-object v0, Lcom/xzodomyx/Hud;->sPopup:Landroid/widget/PopupWindow;
 
-    sput-object v0, Lcom/xzodomyx/Hud;->sText:Landroid/widget/TextView;
+    sput-object v0, Lcom/xzodomyx/Hud;->sText:Lcom/xzodomyx/FpsView;
 
     sput-object v0, Lcom/xzodomyx/Hud;->sSelf:Lcom/xzodomyx/Hud;
 
@@ -344,25 +325,11 @@
 
     long-to-int v0, v8
 
-    sget-object v1, Lcom/xzodomyx/Hud;->sText:Landroid/widget/TextView;
+    sget-object v1, Lcom/xzodomyx/Hud;->sText:Lcom/xzodomyx/FpsView;
 
     if-eqz v1, :cond_reset
 
-    new-instance v2, Ljava/lang/StringBuilder;
-
-    invoke-direct {v2}, Ljava/lang/StringBuilder;-><init>()V
-
-    const-string v3, "FPS "
-
-    invoke-virtual {v2, v3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
-
-    invoke-virtual {v2, v0}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
-
-    invoke-virtual {v2}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
-
-    move-result-object v2
-
-    invoke-virtual {v1, v2}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
+    invoke-virtual {v1, v0}, Lcom/xzodomyx/FpsView;->setFps(I)V
 
     :cond_reset
     const/4 v0, 0x0

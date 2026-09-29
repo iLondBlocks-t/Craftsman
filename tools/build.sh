@@ -48,11 +48,14 @@ echo "    classes.dex: $(stat -c%s "$DEX") bytes"
 echo "==> 4/5  patch AndroidManifest.xml"
 python3 "$ROOT/tools/patch_manifest.py" "$WORK/dec/AndroidManifest.xml" "$WORK/AndroidManifest.patched.xml"
 
-echo "==> 5/5  repack, zipalign, sign"
+echo "==> 5/5  restyle menu textures, repack, zipalign, sign"
+python3 "$ROOT/tools/retexture.py" "$WORK/dec" "$WORK/textures"
+
 python3 "$ROOT/tools/repack.py" \
   --base "$BASE_APK" \
   --dex "$DEX" \
   --manifest "$WORK/AndroidManifest.patched.xml" \
+  --override "$WORK/textures" \
   --keystore "$ROOT/xzodomyx.p12" \
   --out "$OUT/XZO-Domyx-PE-0.14.3.apk"
 

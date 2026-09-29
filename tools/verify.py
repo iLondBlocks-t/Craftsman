@@ -36,6 +36,10 @@ za, zb = zipfile.ZipFile(STOCK), zipfile.ZipFile(MODDED)
 na = {n for n in za.namelist() if not n.startswith('META-INF/')}
 nb = {n for n in zb.namelist() if not n.startswith('META-INF/')}
 EXPECTED_CHANGED = {'classes.dex', 'AndroidManifest.xml'}
+_mf = 'build/textures/MANIFEST.txt'
+import os as _os
+if _os.path.exists(_mf):
+    EXPECTED_CHANGED |= {l.strip() for l in open(_mf) if l.strip()}
 
 if na - nb:
     bad('entries missing from build: %s' % sorted(na - nb)[:5])
@@ -51,10 +55,30 @@ for n in sorted(na & nb):
     if hashlib.sha256(za.read(n)).digest() != hashlib.sha256(zb.read(n)).digest():
         changed.append(n)
 if set(changed) == EXPECTED_CHANGED:
-    ok('exactly %s differ; other %d entries byte-identical'
-       % (sorted(EXPECTED_CHANGED), len(na) - 2))
+    ok('exactly %d intended entries differ (2 code + %d textures); '
+       'other %d entries byte-identical'
+       % (len(changed), len(changed) - 2, len(na) - len(changed)))
 else:
-    bad('unexpected diff set: %s' % changed)
+    unexp = sorted(set(changed) - EXPECTED_CHANGED)
+    miss = sorted(EXPECTED_CHANGED - set(changed))
+    if unexp:
+        bad('UNINTENDED entry changes: %s' % unexp[:6])
+    if miss:
+        bad('expected change missing: %s' % miss[:6])
+
+# Feature E safety: restyled textures must keep identical pixel dimensions
+try:
+    from PIL import Image as _Im
+    import io as _io
+    dims = [(n, _Im.open(_io.BytesIO(za.read(n))).size, _Im.open(_io.BytesIO(zb.read(n))).size)
+            for n in changed if n.endswith('.png')]
+    off = [d for d in dims if d[1] != d[2]]
+    if off:
+        bad('texture dimension drift: %s' % off[:4])
+    elif dims:
+        ok('all %d restyled textures keep stock dimensions' % len(dims))
+except ImportError:
+    pass
 
 print('== 2. manifest ==')
 from androguard.core.apk import APK  # noqa: E402
@@ -101,7 +125,8 @@ if removed:
     bad('classes removed from stock dex: %s' % sorted(removed)[:5])
 else:
     ok('no stock classes removed (%d intact)' % len(ca))
-EXPECTED_NEW = {'Lcom/xzodomyx/LauncherActivity;', 'Lcom/xzodomyx/Hud;'}
+EXPECTED_NEW = {'Lcom/xzodomyx/LauncherActivity;', 'Lcom/xzodomyx/Hud;',
+                'Lcom/xzodomyx/FpsView;'}
 if added == EXPECTED_NEW:
     ok('added exactly: %s' % sorted(added))
 else:
