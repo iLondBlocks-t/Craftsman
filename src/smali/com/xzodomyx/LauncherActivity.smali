@@ -782,6 +782,61 @@
     invoke-static {v2, v0}, Lcom/xzodomyx/LauncherActivity;->writeGameOption(Ljava/lang/String;Ljava/lang/String;)V
 
     :cond_skip
+    # One-time note. Per confirmed finding B a launcher cannot apply a custom skin
+    # end-to-end on 0.14.3, so tell the user plainly that the last step is in-game.
+    invoke-direct {p0}, Lcom/xzodomyx/LauncherActivity;->prefs()Landroid/content/SharedPreferences;
+
+    move-result-object v2
+
+    const-string v3, "skin_path"
+
+    const-string v4, ""
+
+    invoke-interface {v2, v3, v4}, Landroid/content/SharedPreferences;->getString(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v3
+
+    invoke-virtual {v3}, Ljava/lang/String;->length()I
+
+    move-result v3
+
+    if-eqz v3, :cond_nonote
+
+    const-string v3, "skin_note_shown"
+
+    const/4 v4, 0x0
+
+    invoke-interface {v2, v3, v4}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z
+
+    move-result v3
+
+    if-nez v3, :cond_nonote
+
+    const-string v3, "Skin prepared - open Settings > Skin in-game once to select it from your gallery."
+
+    const/4 v4, 0x1
+
+    invoke-static {p0, v3, v4}, Landroid/widget/Toast;->makeText(Landroid/content/Context;Ljava/lang/CharSequence;I)Landroid/widget/Toast;
+
+    move-result-object v3
+
+    invoke-virtual {v3}, Landroid/widget/Toast;->show()V
+
+    invoke-interface {v2}, Landroid/content/SharedPreferences;->edit()Landroid/content/SharedPreferences$Editor;
+
+    move-result-object v2
+
+    const-string v3, "skin_note_shown"
+
+    const/4 v4, 0x1
+
+    invoke-interface {v2, v3, v4}, Landroid/content/SharedPreferences$Editor;->putBoolean(Ljava/lang/String;Z)Landroid/content/SharedPreferences$Editor;
+
+    move-result-object v2
+
+    invoke-interface {v2}, Landroid/content/SharedPreferences$Editor;->apply()V
+
+    :cond_nonote
     :try_end_0
     .catch Ljava/lang/Throwable; {:try_start_0 .. :try_end_0} :catch_0
 
@@ -793,6 +848,12 @@
     # never block the game from starting
     :goto_go
     :try_start_1
+    # hand off in landscape so there is no portrait->landscape flash on the way in.
+    # MainActivity itself stays on its stock android:screenOrientation="sensorLandscape".
+    const/4 v5, 0x0
+
+    invoke-virtual {p0, v5}, Lcom/xzodomyx/LauncherActivity;->setRequestedOrientation(I)V
+
     new-instance v3, Landroid/content/Intent;
 
     const-class v4, Lcom/mojang/minecraftpe/MainActivity;

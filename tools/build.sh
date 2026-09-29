@@ -26,9 +26,10 @@ if [ ! -d "$WORK/dec" ]; then
   "$JAVA" -jar "$APKTOOL" d -r -f -o "$WORK/dec" "$BASE_APK" >/dev/null
 fi
 
-echo "==> 2/5  overlay our smali sources"
+echo "==> 2/5  overlay our smali sources + patch the game's smali"
 mkdir -p "$WORK/dec/smali"
 cp -r "$ROOT/src/smali/." "$WORK/dec/smali/"
+python3 "$ROOT/tools/patch_smali.py" "$WORK/dec"
 
 echo "==> 3/5  assemble classes.dex"
 rm -rf "$WORK/dec/build"

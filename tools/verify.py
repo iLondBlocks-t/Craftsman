@@ -101,10 +101,11 @@ if removed:
     bad('classes removed from stock dex: %s' % sorted(removed)[:5])
 else:
     ok('no stock classes removed (%d intact)' % len(ca))
-if added == {'Lcom/xzodomyx/LauncherActivity;'}:
+EXPECTED_NEW = {'Lcom/xzodomyx/LauncherActivity;', 'Lcom/xzodomyx/Hud;'}
+if added == EXPECTED_NEW:
     ok('added exactly: %s' % sorted(added))
 else:
-    bad('unexpected added classes: %s' % sorted(added))
+    bad('unexpected added classes: %s (expected %s)' % (sorted(added), sorted(EXPECTED_NEW)))
 
 ma = {(m.get_class_name(), m.get_name(), m.get_descriptor()) for m in da.get_methods()}
 mb = {(m.get_class_name(), m.get_name(), m.get_descriptor()) for m in db.get_methods()}
@@ -112,7 +113,51 @@ stock_missing = {m for m in ma - mb}
 if stock_missing:
     bad('stock methods missing: %d e.g. %s' % (len(stock_missing), list(stock_missing)[:2]))
 else:
-    ok('all %d stock methods present and unmodified in signature' % len(ma))
+    ok('all %d stock method signatures present' % len(ma))
+
+# Bytecode-level diff: which stock method BODIES actually changed?
+# This is the check that proves we did not disturb game logic anywhere else.
+EXPECTED_PATCHED = {
+    ('Lcom/mojang/minecraftpe/MainActivity;', 'onResume', '()V'),
+    ('Lcom/mojang/minecraftpe/MainActivity;', 'onPause', '()V'),
+}
+
+
+def bodies(dex):
+    # NB: DEX.get_methods() yields MethodIdItem (no code); EncodedMethod, which
+    # actually carries the bytecode, only comes from the class defs.
+    out = {}
+    for cls in dex.get_classes():
+        for m in cls.get_methods():
+            key = (m.get_class_name(), m.get_name(), m.get_descriptor())
+            c = m.get_code()
+            if c is None:
+                out[key] = ''
+                continue
+            # Compare *resolved* disassembly, not raw bytes: adding classes shifts the
+            # dex string/type/method index tables, so identical logic has different
+            # operand indices. get_output() resolves those back to names.
+            out[key] = '\n'.join(
+                '%s %s' % (i.get_name(), i.get_output())
+                for i in c.get_bc().get_instructions())
+    return out
+
+
+ba, bb = bodies(da), bodies(db)
+touched = {k for k in ma & mb if ba.get(k) != bb.get(k)}
+if touched == EXPECTED_PATCHED:
+    ok('exactly %d stock method bodies changed, all intended: %s'
+       % (len(touched), sorted(n for _, n, _ in touched)))
+else:
+    unexpected = touched - EXPECTED_PATCHED
+    missing = EXPECTED_PATCHED - touched
+    if unexpected:
+        bad('UNINTENDED stock code changes: %s' % sorted(unexpected)[:5])
+    if missing:
+        bad('expected hook not applied: %s' % sorted(missing))
+
+if not touched - EXPECTED_PATCHED:
+    ok('%d stock method bodies bit-identical' % (len(ma & mb) - len(touched)))
 
 print('== 4. zipalign ==')
 raw = open(MODDED, 'rb').read()
