@@ -1,0 +1,7 @@
+# Modding work tree — regenerated from the APK, never committed
+/build/
+/work/
+/out/
+*.keystore
+*.p12
+*.jks
