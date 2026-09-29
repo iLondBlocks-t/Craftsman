@@ -7,3 +7,6 @@
 *.jks
 apktool.log
 __pycache__/
+
+# built APK is published under dist/ instead
+!dist/
