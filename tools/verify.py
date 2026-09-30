@@ -262,6 +262,32 @@ for _label, _cond in [
 ]:
     (ok if _cond else bad)(_label)
 
+print('== 3d. encoder selection ==')
+# createEncoderByType() returns whatever the platform lists first for video/avc,
+# which on many mid-range devices is the Google SOFTWARE encoder. That is the
+# difference between recording being free and recording eating the game's CPU.
+_pk, _mk, _st2 = _ins(_R, 'pickEncoderName'), _ins(_R, 'makeCodec'), _ins(_R, 'start')
+for _label, _cond in [
+    ('encoder list is enumerated',
+     any('getCodecCount' in o for o in _pk) and any('getCodecInfoAt' in o for o in _pk)),
+    ('software encoders (OMX.google.*, c2.android.*) are skipped',
+     any('OMX.google.' in o for o in _pk) and any('c2.android.' in o for o in _pk)),
+    ('only video/avc encoders are considered',
+     any('video/avc' in o for o in _pk) and any('isEncoder' in o for o in _pk)),
+    ('makeCodec prefers createByCodecName', any('createByCodecName' in o for o in _mk)),
+    ('makeCodec still falls back rather than failing to record',
+     any('createEncoderByType' in o for o in _mk)),
+    ('start() goes through makeCodec',
+     any('makeCodec' in o for o in _st2)
+     and not any('createEncoderByType' in o for o in _st2)),
+    ('frame rate is 24 in low-lag and 30 otherwise',
+     any(o.strip().endswith(', 24') for o in _st2)
+     and any(o.strip().endswith(', 30') for o in _st2)),
+    ('chosen encoder name is surfaced to the user',
+     any('sCodecName' in o for o in _st2) and any('toast' in o for o in _st2)),
+]:
+    (ok if _cond else bad)(_label)
+
 print('== 4. zipalign ==')
 raw = open(MODDED, 'rb').read()
 misaligned = 0

@@ -32,6 +32,16 @@
 
 .field static sCodec:Landroid/media/MediaCodec;
 
+.field static sCodecName:Ljava/lang/String;
+
+.field static sFps:I
+
+.field static sH:I
+
+.field static sLowLag:Z
+
+.field static sW:I
+
 .field static sMuxer:Landroid/media/MediaMuxer;
 
 .field static sMuxing:Z
@@ -221,6 +231,10 @@
 
     and-int/lit8 v3, v3, -0x2
 
+    sput v2, Lcom/xzodomyx/Rec;->sW:I
+
+    sput v3, Lcom/xzodomyx/Rec;->sH:I
+
     # ---- output path ----
     const-string v5, "Movies"
 
@@ -285,13 +299,36 @@
 
     mul-int v10, v2, v3
 
+    sget-boolean v11, Lcom/xzodomyx/Rec;->sLowLag:Z
+
+    if-eqz v11, :cond_bithi
+
+    mul-int/lit8 v10, v10, 0x2
+
+    goto :goto_bit
+
+    :cond_bithi
     mul-int/lit8 v10, v10, 0x4
+
+    :goto_bit
 
     invoke-virtual {v6, v9, v10}, Landroid/media/MediaFormat;->setInteger(Ljava/lang/String;I)V
 
     const-string v9, "frame-rate"
 
-    const/16 v10, 0x1e
+    sget-boolean v11, Lcom/xzodomyx/Rec;->sLowLag:Z
+
+    if-eqz v11, :cond_fps30
+
+    const/16 v10, 0x18             # 24 fps
+
+    goto :goto_fps
+
+    :cond_fps30
+    const/16 v10, 0x1e             # 30 fps
+
+    :goto_fps
+    sput v10, Lcom/xzodomyx/Rec;->sFps:I
 
     invoke-virtual {v6, v9, v10}, Landroid/media/MediaFormat;->setInteger(Ljava/lang/String;I)V
 
@@ -310,7 +347,7 @@
 
     invoke-virtual {v6, v9, v10, v11}, Landroid/media/MediaFormat;->setLong(Ljava/lang/String;J)V
 
-    invoke-static {v5}, Landroid/media/MediaCodec;->createEncoderByType(Ljava/lang/String;)Landroid/media/MediaCodec;
+    invoke-static {v5}, Lcom/xzodomyx/Rec;->makeCodec(Ljava/lang/String;)Landroid/media/MediaCodec;
 
     move-result-object v5
 
@@ -439,6 +476,51 @@
 
     invoke-virtual {v1}, Ljava/lang/Thread;->start()V
 
+    # Report the negotiated size, rate and encoder name. There is no device in
+    # the build environment, so this toast is the only way to find out whether
+    # the phone handed us a hardware or a software encoder.
+    new-instance v0, Ljava/lang/StringBuilder;
+
+    invoke-direct {v0}, Ljava/lang/StringBuilder;-><init>()V
+
+    const-string v5, "REC "
+
+    invoke-virtual {v0, v5}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    sget v5, Lcom/xzodomyx/Rec;->sW:I
+
+    invoke-virtual {v0, v5}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
+
+    const-string v5, "x"
+
+    invoke-virtual {v0, v5}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    sget v5, Lcom/xzodomyx/Rec;->sH:I
+
+    invoke-virtual {v0, v5}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
+
+    const-string v5, " @"
+
+    invoke-virtual {v0, v5}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    sget v5, Lcom/xzodomyx/Rec;->sFps:I
+
+    invoke-virtual {v0, v5}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
+
+    const-string v5, "fps\n"
+
+    invoke-virtual {v0, v5}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    sget-object v5, Lcom/xzodomyx/Rec;->sCodecName:Ljava/lang/String;
+
+    invoke-virtual {v0, v5}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    invoke-virtual {v0}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+
+    move-result-object v0
+
+    invoke-static {v0}, Lcom/xzodomyx/Rec;->toast(Ljava/lang/String;)V
+
     invoke-static {p0}, Lcom/xzodomyx/Rec;->notif(Landroid/app/Activity;)V
 
     const/4 v0, 0x1
@@ -488,6 +570,142 @@
     move-result-object v0
 
     return-object v0
+.end method
+
+.method static pickEncoderName()Ljava/lang/String;
+    .locals 11
+
+    # createEncoderByType() returns whatever the platform lists FIRST for
+    # video/avc, and on plenty of mid-range devices that is the Google software
+    # encoder. Software-encoding 30fps on the same cores the game is running on
+    # is exactly the stutter being reported, so walk the list and take a real
+    # hardware encoder instead.
+    const/4 v0, 0x0
+
+    :try_start_0
+    invoke-static {}, Landroid/media/MediaCodecList;->getCodecCount()I
+
+    move-result v1
+
+    const/4 v2, 0x0
+
+    :goto_i
+    if-ge v2, v1, :cond_done
+
+    invoke-static {v2}, Landroid/media/MediaCodecList;->getCodecInfoAt(I)Landroid/media/MediaCodecInfo;
+
+    move-result-object v3
+
+    invoke-virtual {v3}, Landroid/media/MediaCodecInfo;->isEncoder()Z
+
+    move-result v10
+
+    if-eqz v10, :cond_next
+
+    invoke-virtual {v3}, Landroid/media/MediaCodecInfo;->getName()Ljava/lang/String;
+
+    move-result-object v4
+
+    const-string v9, "OMX.google."
+
+    invoke-virtual {v4, v9}, Ljava/lang/String;->startsWith(Ljava/lang/String;)Z
+
+    move-result v10
+
+    if-nez v10, :cond_next
+
+    const-string v9, "c2.android."
+
+    invoke-virtual {v4, v9}, Ljava/lang/String;->startsWith(Ljava/lang/String;)Z
+
+    move-result v10
+
+    if-nez v10, :cond_next
+
+    invoke-virtual {v3}, Landroid/media/MediaCodecInfo;->getSupportedTypes()[Ljava/lang/String;
+
+    move-result-object v5
+
+    array-length v6, v5
+
+    const/4 v7, 0x0
+
+    :goto_t
+    if-ge v7, v6, :cond_next
+
+    aget-object v8, v5, v7
+
+    const-string v9, "video/avc"
+
+    invoke-virtual {v9, v8}, Ljava/lang/String;->equalsIgnoreCase(Ljava/lang/String;)Z
+
+    move-result v10
+
+    if-eqz v10, :cond_tnext
+
+    move-object v0, v4
+
+    goto :cond_done
+
+    :cond_tnext
+    add-int/lit8 v7, v7, 0x1
+
+    goto :goto_t
+
+    :cond_next
+    add-int/lit8 v2, v2, 0x1
+
+    goto :goto_i
+
+    :cond_done
+    :try_end_0
+    .catch Ljava/lang/Throwable; {:try_start_0 .. :try_end_0} :catch_0
+
+    :goto_ret
+    return-object v0
+
+    :catch_0
+    move-exception v1
+
+    const/4 v0, 0x0
+
+    goto :goto_ret
+.end method
+
+.method static makeCodec(Ljava/lang/String;)Landroid/media/MediaCodec;
+    .locals 3
+
+    invoke-static {}, Lcom/xzodomyx/Rec;->pickEncoderName()Ljava/lang/String;
+
+    move-result-object v0
+
+    if-eqz v0, :cond_bytype
+
+    :try_start_0
+    invoke-static {v0}, Landroid/media/MediaCodec;->createByCodecName(Ljava/lang/String;)Landroid/media/MediaCodec;
+
+    move-result-object v1
+
+    sput-object v0, Lcom/xzodomyx/Rec;->sCodecName:Ljava/lang/String;
+    :try_end_0
+    .catch Ljava/lang/Throwable; {:try_start_0 .. :try_end_0} :catch_0
+
+    return-object v1
+
+    :catch_0
+    move-exception v2
+
+    :cond_bytype
+    # fall back to the platform default rather than failing to record at all
+    invoke-static {p0}, Landroid/media/MediaCodec;->createEncoderByType(Ljava/lang/String;)Landroid/media/MediaCodec;
+
+    move-result-object v1
+
+    const-string v0, "default"
+
+    sput-object v0, Lcom/xzodomyx/Rec;->sCodecName:Ljava/lang/String;
+
+    return-object v1
 .end method
 
 .method public static setPaused(Z)V

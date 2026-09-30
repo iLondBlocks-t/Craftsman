@@ -99,7 +99,61 @@ the file rather than leaking the encoder.
 **own pointer id**, so a finger already down for look-drag or movement can never be confused with a
 press, and only the finger that started a press can complete it.
 
-### On "frame-by-frame with ffmpeg for no lag"
+### Searching for an ffmpeg route (requested explicitly, size limit lifted)
+
+The size constraint was lifted and I was asked to find a way "by any means". Every reachable
+source was checked rather than assumed:
+
+| Source | Result |
+|---|---|
+| `npm: ffmpeg-kit-android`, `ffmpeg-android`, `mobile-ffmpeg`, `ffmpeg-static-android` | 404, do not exist |
+| `npm: ffmpeg-kit`, `react-native-ffmpeg` | Exist, but are **wrappers only** - 10 and 34 files, zero `.so`/`.aar`. They fetch the real binaries from Maven, which is blocked here. |
+| `pypi: ffmpeg-binaries` | x86_64 / macOS / Windows wheels only. No ARM. |
+| `pypi: ffmpeg-android`, `android-ffmpeg` | 404 |
+| **FFmpeg source on GitHub** | **Reachable** - `git ls-remote` succeeds |
+
+So the only route would be cross-compiling FFmpeg from source for ARM32. That is possible in
+principle. **It was still not done, and the reason is not the size and not the effort.**
+
+### Why frame-by-frame + FFmpeg was rejected
+
+The decisive information came from the user: the stutter is **in the game while recording**, not
+in the resulting video on playback. Those two symptoms have opposite fixes, and for this one
+FFmpeg makes things strictly worse:
+
+1. **Per-frame capture is itself the expensive half.** Reading each frame back means
+   `glReadPixels` on the game's GL context: a full pipeline flush (the CPU blocks until the GPU
+   finishes the frame) plus ~2 MB copied to CPU memory per frame, and it has to happen *on the
+   game's render thread*. The cost lands directly on the frame rate being complained about.
+2. **FFmpeg encodes in software.** The current path never lets pixel data touch the CPU - frames
+   go to the **hardware** H.264 encoder over a Surface. Swapping in libx264 means software
+   encoding ~30 fps on the same cores running the world. That is the cause of in-game recording
+   stutter, not the cure.
+
+Had the answer been "the video is choppy but the game was fine", fixed-rate frame pacing would
+have been the right fix - and still not FFmpeg.
+
+### What was done instead: stop using the software encoder
+
+The likely real culprit, not previously checked: `MediaCodec.createEncoderByType("video/avc")`
+returns whatever the platform lists **first**, and on a lot of mid-range devices that is
+`OMX.google.h264.encoder` - the **software** encoder. If that is what the phone handed us, then
+the recording *was* already being software-encoded on the CPU, which matches the reported symptom
+exactly.
+
+`pickEncoderName()` now walks `MediaCodecList`, skips anything named `OMX.google.*` or
+`c2.android.*`, and picks a real hardware AVC encoder, falling back to the old behaviour rather
+than failing to record.
+
+Also, low-lag mode now drops to **24 fps** and halves the bitrate target.
+
+**The toast when recording starts now prints the negotiated size, rate and encoder name**, e.g.
+`REC 854x480 @24fps / OMX.qcom.video.encoder.avc`. There is no device in this build environment,
+so that string is the only way to find out what the phone actually chose. A name starting with
+`OMX.google.` or `c2.android.` would mean the phone has no hardware encoder available at that
+size, which is worth knowing.
+
+### Earlier note on "frame-by-frame with ffmpeg for no lag"
 
 This was requested and **deliberately not done**, because it would increase lag rather than
 remove it. Three separate reasons, all measurable rather than matters of taste:

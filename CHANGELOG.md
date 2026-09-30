@@ -5,6 +5,35 @@ Every entry was checked with `tools/verify.py` before being committed.
 
 ---
 
+## Recorder — stop using the software encoder
+
+Follow-up to a report that the **game** stutters while recording (the video itself is fine) on a
+mid-range Android 8-10 device.
+
+Likely real cause, not previously checked: `createEncoderByType("video/avc")` returns whatever the
+platform lists first, and on many mid-range devices that is `OMX.google.h264.encoder` - the
+**software** encoder. If so, the recording was already being software-encoded on the CPU, which
+matches the symptom exactly.
+
+- `pickEncoderName()` walks `MediaCodecList`, skips `OMX.google.*` and `c2.android.*`, and selects
+  a real hardware AVC encoder. Falls back to the previous behaviour rather than failing to record.
+- Low-lag mode now also drops to 24 fps and halves the bitrate target.
+- The start toast now reports the negotiated size, rate and encoder name, e.g.
+  `REC 854x480 @24fps / OMX.qcom.video.encoder.avc`. With no device in the build environment this
+  is the only way to learn what the phone actually picked.
+
+**FFmpeg / frame-by-frame: searched for, and still rejected.** The size limit was lifted, so every
+reachable source was checked: the `ffmpeg-kit*` and `*-ffmpeg` npm packages are wrappers with no
+ARM binaries (Maven is blocked), `pypi: ffmpeg-binaries` is x86_64/mac/win only, and only the
+FFmpeg *source* on GitHub is reachable. Cross-compiling it is possible in principle. It was
+rejected anyway because the reported symptom is in-game stutter: per-frame `glReadPixels` stalls
+the game's own render thread, and software encoding would compete with the game for CPU. Full
+reasoning and the source-availability table are in `docs/04-FEATURES-A-E.md`.
+
+`verify.py` gains `3d. encoder selection` (8 checks). Total 48 checks, all passing.
+
+---
+
 ## Recorder — lag reduction, and capture limited to the game
 
 **Not done, on purpose: frame-by-frame capture with FFmpeg.** It was requested, but it would make

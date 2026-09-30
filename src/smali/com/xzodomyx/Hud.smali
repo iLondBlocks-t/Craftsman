@@ -139,6 +139,8 @@
 
     move-result v3
 
+    sput-boolean v3, Lcom/xzodomyx/Rec;->sLowLag:Z
+
     if-eqz v3, :cond_nolow
 
     const/16 v3, 0x356             # 854 px wide
@@ -150,6 +152,8 @@
 
     :goto_cap
     sput v3, Lcom/xzodomyx/Rec;->sMaxW:I
+
+    invoke-interface {v0, v3, v4}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z
 
     # Back in the game: resume capturing (no-op when not recording).
     const/4 v3, 0x0
