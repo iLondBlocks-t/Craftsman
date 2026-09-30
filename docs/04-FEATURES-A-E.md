@@ -99,6 +99,29 @@ the file rather than leaking the encoder.
 **own pointer id**, so a finger already down for look-drag or movement can never be confused with a
 press, and only the finger that started a press can complete it.
 
+### Where the button is, and a bug that was in the last build
+
+The REC button is a **red dot in the top-right corner of the game screen**, inset ~16dp from the
+corner, 40dp across. It appears as soon as the game view is up — but **only if you tick "Enable
+gameplay recording" on the launcher screen and grant the screen-capture prompt**. Without that
+consent there is nothing to record with, so no button is drawn at all.
+
+In the previously published APK the button **would never have appeared**, even with the toggle on.
+Three ordering defects in `Hud.attach()`:
+
+1. `sActivity` was assigned only inside the keep-awake branch — null whenever that toggle was off.
+2. `sMargin` / `sAnchor` were assigned only inside the FPS-counter branch, and *after* the
+   recorder block ran — so `showRec()` always saw a null anchor and silently returned.
+3. `showRec()` was called straight from `onResume`, before the decor view has a window token.
+
+Fixed: those three statics are now set unconditionally at the very top of `attach()`, and the
+button is shown via `View.post()` — the same deferral the FPS overlay already used. `verify.py`
+now carries a permanent check (`3b. HUD init ordering`) that reads the **shipped dex** and fails
+the build if any of them is written after `buildRec`, so this cannot regress silently.
+
+To stop recording, pull down the notification shade and tap **"XZO-Domyx is recording — Tap to
+stop"**. The button is deliberately hidden while recording so it stays out of the video.
+
 ### Not verified
 
 No device: the encoder chain, consent hand-off and notification stop are statically verified only

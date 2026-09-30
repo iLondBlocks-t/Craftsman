@@ -5,6 +5,26 @@ Every entry was checked with `tools/verify.py` before being committed.
 
 ---
 
+## Fix — the REC button never appeared
+
+The previously published build shipped a real defect: three ordering bugs in `Hud.attach()` meant
+the recording button could never be displayed. `sActivity` was set only inside the keep-awake
+branch; `sMargin`/`sAnchor` only inside the FPS branch and *after* the recorder was built, so
+`showRec()` always saw a null anchor; and the show call happened before the decor view had a
+window token.
+
+All three statics are now initialised unconditionally at the top of `attach()`, and the button is
+shown via `View.post()`. `verify.py` gained check `3b. HUD init ordering`, which reads the shipped
+dex and fails if any of them is written after `buildRec`.
+
+Also: `tools/bootstrap.sh` now installs `pillow`, `capstone` and `ziglang`. Later work depended on
+them but they were never added to the bootstrap, so a fresh environment could not reproduce a build.
+
+Verified: ALL CHECKS PASSED — 7 added classes (`Hud$1` is new), 8892/8894 stock method bodies
+bit-identical, still only `MainActivity.onResume`/`onPause` changed.
+
+---
+
 ## Feature A — gameplay recording · **implemented**
 
 Start/Stop recording to `Movies/XZO-Domyx/xzo_<ts>.mp4`, fully local.

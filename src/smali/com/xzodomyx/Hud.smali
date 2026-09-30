@@ -69,6 +69,40 @@
 
     move-result-object v0
 
+    # These three must be set BEFORE any overlay is built. Previously sActivity was
+    # only assigned inside the keep-awake branch, and sAnchor/sMargin only inside the
+    # FPS branch -- so with those toggles off the REC button had no anchor and never
+    # appeared. They are unconditional now.
+    sput-object p0, Lcom/xzodomyx/Hud;->sActivity:Landroid/app/Activity;
+
+    invoke-virtual {p0}, Landroid/app/Activity;->getResources()Landroid/content/res/Resources;
+
+    move-result-object v1
+
+    invoke-virtual {v1}, Landroid/content/res/Resources;->getDisplayMetrics()Landroid/util/DisplayMetrics;
+
+    move-result-object v1
+
+    iget v1, v1, Landroid/util/DisplayMetrics;->density:F
+
+    const/high16 v2, 0x41000000
+
+    mul-float/2addr v1, v2
+
+    float-to-int v1, v1
+
+    sput v1, Lcom/xzodomyx/Hud;->sMargin:I
+
+    invoke-virtual {p0}, Landroid/app/Activity;->getWindow()Landroid/view/Window;
+
+    move-result-object v1
+
+    invoke-virtual {v1}, Landroid/view/Window;->getDecorView()Landroid/view/View;
+
+    move-result-object v1
+
+    sput-object v1, Lcom/xzodomyx/Hud;->sAnchor:Landroid/view/View;
+
     # "Keep screen awake" toggle from the splash screen. Opt-in only, so stock
     # behaviour is untouched unless the user ticks it.
     const-string v1, "keep_awake"
@@ -88,8 +122,6 @@
     const/16 v2, 0x80
 
     invoke-virtual {v1, v2}, Landroid/view/Window;->addFlags(I)V
-
-    sput-object p0, Lcom/xzodomyx/Hud;->sActivity:Landroid/app/Activity;
 
     :cond_nowake
     # ---- Feature A: hand the MediaProjection consent captured by the launcher
@@ -263,7 +295,15 @@
 
     sput-object v1, Lcom/xzodomyx/Hud;->sRecBtn:Lcom/xzodomyx/RecButton;
 
-    invoke-static {}, Lcom/xzodomyx/Hud;->showRec()V
+    sget-object v3, Lcom/xzodomyx/Hud;->sAnchor:Landroid/view/View;
+
+    if-eqz v3, :cond_out
+
+    new-instance v4, Lcom/xzodomyx/Hud$1;
+
+    invoke-direct {v4}, Lcom/xzodomyx/Hud$1;-><init>()V
+
+    invoke-virtual {v3, v4}, Landroid/view/View;->post(Ljava/lang/Runnable;)Z
 
     :cond_out
     :try_end_0

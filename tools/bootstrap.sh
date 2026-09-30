@@ -12,7 +12,7 @@ PYLIBS="${PYLIBS:-$HOME/.local/pylibs}"
 mkdir -p "$TOOLS/bin" "$PYLIBS"
 
 echo "==> Python tooling (JRE, dex analysis, aapt2, crypto for signing)"
-pip install --quiet --target="$PYLIBS" jdk4py androguard aapt2 cryptography
+pip install --quiet --target="$PYLIBS" jdk4py androguard aapt2 cryptography pillow capstone ziglang
 
 export PYTHONPATH="$PYLIBS"
 JAVA_HOME="$(python3 -c 'import jdk4py; print(jdk4py.JAVA_HOME)')"

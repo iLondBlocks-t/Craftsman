@@ -127,7 +127,7 @@ else:
     ok('no stock classes removed (%d intact)' % len(ca))
 EXPECTED_NEW = {'Lcom/xzodomyx/LauncherActivity;', 'Lcom/xzodomyx/Hud;',
                 'Lcom/xzodomyx/FpsView;', 'Lcom/xzodomyx/Rec;',
-                'Lcom/xzodomyx/Rec$1;', 'Lcom/xzodomyx/RecButton;'}
+                'Lcom/xzodomyx/Rec$1;', 'Lcom/xzodomyx/RecButton;', 'Lcom/xzodomyx/Hud$1;'}
 if added == EXPECTED_NEW:
     ok('added exactly: %s' % sorted(added))
 else:
@@ -184,6 +184,35 @@ else:
 
 if not touched - EXPECTED_PATCHED:
     ok('%d stock method bodies bit-identical' % (len(ma & mb) - len(touched)))
+
+print('== 3b. HUD init ordering ==')
+# Regression guard: sActivity/sMargin/sAnchor must all be written BEFORE
+# buildRec runs, otherwise the REC overlay has no anchor and never appears.
+# This bug shipped once; the check exists so it cannot ship again.
+_hud = {c.get_name(): c for c in db.get_classes()}.get('Lcom/xzodomyx/Hud;')
+if _hud is None:
+    bad('Hud class missing')
+else:
+    _att = [m for m in _hud.get_methods() if m.get_name() == 'attach']
+    _seq = []
+    for _i in _att[0].get_code().get_bc().get_instructions():
+        _o = _i.get_output()
+        for _k in ('sActivity', 'sMargin', 'sAnchor', 'buildRec'):
+            if _k in _o:
+                _seq.append((_i.get_name(), _k))
+
+    def _first(k, pre=None):
+        for _n, (_op, _kk) in enumerate(_seq):
+            if _kk == k and (pre is None or _op.startswith(pre)):
+                return _n
+        return 999
+
+    _b = _first('buildRec')
+    for _f in ('sActivity', 'sMargin', 'sAnchor'):
+        if _first(_f, 'sput') < _b:
+            ok('%s initialised before buildRec' % _f)
+        else:
+            bad('%s written AFTER buildRec -- REC button would never appear' % _f)
 
 print('== 4. zipalign ==')
 raw = open(MODDED, 'rb').read()
