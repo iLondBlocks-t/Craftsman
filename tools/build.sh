@@ -15,6 +15,14 @@ TOOLS="${TOOLS:-$HOME/.local/tools}"
 PYLIBS="${PYLIBS:-$HOME/.local/pylibs}"
 
 export PYTHONPATH="$PYLIBS:$ROOT/tools"
+
+# This sandbox periodically wipes ~/.local, which silently leaves the build
+# with no JRE and no apktool. Re-bootstrap instead of failing in a confusing way.
+if ! python3 -c 'import jdk4py' 2>/dev/null || [ ! -f "$TOOLS/apktool-2.0.3.jar" ]; then
+  echo "==> toolchain missing, running bootstrap.sh"
+  bash "$ROOT/tools/bootstrap.sh"
+fi
+
 JAVA="$(python3 -c 'import jdk4py; print(jdk4py.JAVA_HOME)')/bin/java"
 APKTOOL="$TOOLS/apktool-2.0.3.jar"
 

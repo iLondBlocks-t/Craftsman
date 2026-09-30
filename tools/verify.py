@@ -214,6 +214,54 @@ else:
         else:
             bad('%s written AFTER buildRec -- REC button would never appear' % _f)
 
+print('== 3c. recorder semantics ==')
+# The pause/stop wiring inverted itself once during development (the REC button
+# paused and leaving the game stopped, instead of the reverse). These read the
+# SHIPPED dex so that can never go out unnoticed.
+_cl = {c.get_name(): c for c in db.get_classes()}
+
+
+def _ins(cn, mn):
+    _c = _cl.get(cn)
+    if _c is None:
+        return []
+    for _m in _c.get_methods():
+        if _m.get_name() == mn and _m.get_code():
+            return [_i.get_name() + ' ' + _i.get_output()
+                    for _i in _m.get_code().get_bc().get_instructions()]
+    return []
+
+
+_R, _H = 'Lcom/xzodomyx/Rec;', 'Lcom/xzodomyx/Hud;'
+_st, _run, _sp = _ins(_R, 'start'), _ins(_R, 'run'), _ins(_R, 'setPaused')
+_at, _dt = _ins(_H, 'attach'), _ins(_H, 'detach')
+_ot, _sr = _ins(_H, 'onRecTapped'), _ins(_H, 'showRec')
+
+for _label, _cond in [
+    ('encoder i-frame-interval is 5, not 1',
+     any('i-frame-interval' in o for o in _st)
+     and any(o.strip().endswith(', 5') for o in _st)),
+    ('encoder sets repeat-previous-frame-after',
+     any('repeat-previous-frame-after' in o for o in _st)),
+    ('drain thread runs at background priority',
+     any('setPriority' in o for o in _st)),
+    ('encoder width capped via sMaxW', any('sMaxW' in o for o in _st)),
+    ('drain loop blocks 100ms, does not spin at 10ms',
+     any('100000' in o for o in _run) and not any('10000,' in o for o in _run)),
+    ('drain loop drops frames while sPaused', any('sPaused' in o for o in _run)),
+    ('drain loop removes the paused gap from PTS',
+     any('sSkipUs' in o for o in _run)
+     and any(o.startswith('iput-wide') and 'presentationTimeUs' in o for o in _run)),
+    ('resume requests a keyframe',
+     any('request-sync' in o for o in _sp) and any('setParameters' in o for o in _sp)),
+    ('attach() resumes capture', any('setPaused' in o for o in _at)),
+    ('detach() PAUSES and does not stop',
+     any('setPaused' in o for o in _dt) and not any('Rec;->stop' in o for o in _dt)),
+    ('REC button still STOPS', any('Rec;->stop' in o for o in _ot)),
+    ('showRec() will not show while recording', any('isRecording' in o for o in _sr)),
+]:
+    (ok if _cond else bad)(_label)
+
 print('== 4. zipalign ==')
 raw = open(MODDED, 'rb').read()
 misaligned = 0

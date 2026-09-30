@@ -99,6 +99,69 @@ the file rather than leaking the encoder.
 **own pointer id**, so a finger already down for look-drag or movement can never be confused with a
 press, and only the finger that started a press can complete it.
 
+### On "frame-by-frame with ffmpeg for no lag"
+
+This was requested and **deliberately not done**, because it would increase lag rather than
+remove it. Three separate reasons, all measurable rather than matters of taste:
+
+1. **Frame-by-frame capture is the expensive part, not the encoding.** Grabbing each rendered
+   frame means `glReadPixels` on the game's GL context. That call forces a full pipeline flush:
+   the CPU blocks until the GPU has finished the frame, then drags ~2 MB (960x540 RGBA) across
+   the bus into CPU memory, every frame. On an API 21-era phone that alone typically costs more
+   than the entire current recorder. It also has to happen *on the game's render thread*, so the
+   cost lands directly on the frame rate.
+2. **FFmpeg would encode in software, on the CPU.** The current path hands frames to the
+   **hardware** H.264 encoder over a Surface, so the pixels never touch the CPU and never leave
+   GPU memory. Replacing that with libx264 on an ARM Cortex-A7/A53 means software-encoding
+   ~30 fps while the game is trying to use those same cores to run the world. That is the classic
+   cause of recording lag, not the cure for it.
+3. FFmpeg is also ~10-20 MB of ARM binaries, and this APK has to stay installable and under
+   100 MB.
+
+So the hardware path is kept, and the lag was attacked where it actually comes from.
+
+### What was changed to reduce lag
+
+| Setting | Before | Now | Why |
+|---|---|---|---|
+| `i-frame-interval` | 1 s | 5 s | A keyframe is several times the cost of a normal frame. One per second was burning encoder budget for no benefit at this length. |
+| Encoder input width | 1280 | 854 in low-lag mode | Cuts encoder work and the extra compositor pass for the VirtualDisplay by roughly half. |
+| Drain thread priority | default | background (10) | The drain loop was competing with the game's render thread for CPU. It no longer wins that fight. |
+| `dequeueOutputBuffer` timeout | 10 ms | 100 ms | It was waking 100x/second to usually find nothing. It now blocks inside the codec. |
+| `repeat-previous-frame-after` | unset | 200 ms | Keeps timing sane when the screen is static instead of leaving gaps. |
+
+**Low-lag recording** is a new checkbox on the launcher, **on by default**. Untick it if you would
+rather have the sharper 1280px video and can afford the frames.
+
+I cannot benchmark this - there is no device or emulator in this environment - so I am not going
+to quote a figure. These are the settings that were wrong; whether it is now smooth enough on
+your phone is something only you can tell me.
+
+### "Record only the game, not the whole phone"
+
+Android 5.0 has exactly one capture primitive available to an app, `MediaProjection`, and it
+captures **the display composite**. There is no per-window or per-app capture API on API 21 - that
+did not arrive until much later. So a literal "capture only the game's surface" is not available.
+
+What was implemented instead gets you the actual result: **the recorder now drops every frame
+produced while the game is not in the foreground.** `MainActivity`'s `onPause` pauses the capture
+and `onResume` resumes it, using the same two hooks the mod already owns. So:
+
+- Press home, pull down the notification shade, take a call, reply to a message, open the
+  launcher - **none of it reaches the file.**
+- The time you spent away is subtracted from the presentation timestamps, so the video has no
+  frozen section where you left; the footage joins up.
+- On resume the encoder is asked for a fresh keyframe, so the frames after the join decode
+  cleanly instead of referencing frames that were thrown away.
+
+The remaining honest caveat: while you *are* in the game, the capture is still of the whole
+display. If a notification banner slides over the game, that banner is in the frame. The REC
+button and the FPS counter are not - the button hides itself while recording, and it also now
+refuses to reappear when you come back into the game mid-capture.
+
+Leaving the game no longer *stops* the recording either, it pauses it. Stop with the REC button
+or the notification.
+
 ### Where the button is, and a bug that was in the last build
 
 The REC button is a **red dot in the top-right corner of the game screen**, inset ~16dp from the

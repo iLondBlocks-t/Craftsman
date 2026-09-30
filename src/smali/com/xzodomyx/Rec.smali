@@ -36,7 +36,17 @@
 
 .field static sMuxing:Z
 
+.field static sGap:Z
+
+.field static sMaxW:I
+
 .field static sPath:Ljava/lang/String;
+
+.field static sPausePtsUs:J
+
+.field static sPaused:Z
+
+.field static sSkipUs:J
 
 .field static sProj:Landroid/media/projection/MediaProjection;
 
@@ -189,7 +199,13 @@
 
     # halve until <=1280 wide: keeps bitrate and encoder load sane on old devices
     :goto_shrink
+    sget v5, Lcom/xzodomyx/Rec;->sMaxW:I
+
+    if-gtz v5, :cond_havecap
+
     const/16 v5, 0x500
+
+    :cond_havecap
 
     if-le v2, v5, :cond_size
 
@@ -281,9 +297,18 @@
 
     const-string v9, "i-frame-interval"
 
-    const/4 v10, 0x1
+    const/4 v10, 0x5
 
     invoke-virtual {v6, v9, v10}, Landroid/media/MediaFormat;->setInteger(Ljava/lang/String;I)V
+
+    # don't re-encode anything while the picture is static: the VirtualDisplay
+    # only produces a frame when the screen actually changes, so without this
+    # the muxer sees long gaps. 200ms == 5fps floor on a still screen.
+    const-string v9, "repeat-previous-frame-after"
+
+    const-wide/32 v10, 0x30d40
+
+    invoke-virtual {v6, v9, v10, v11}, Landroid/media/MediaFormat;->setLong(Ljava/lang/String;J)V
 
     invoke-static {v5}, Landroid/media/MediaCodec;->createEncoderByType(Ljava/lang/String;)Landroid/media/MediaCodec;
 
@@ -384,6 +409,20 @@
 
     sput-boolean v0, Lcom/xzodomyx/Rec;->sRec:Z
 
+    const/4 v0, 0x0
+
+    sput-boolean v0, Lcom/xzodomyx/Rec;->sPaused:Z
+
+    sput-boolean v0, Lcom/xzodomyx/Rec;->sGap:Z
+
+    const-wide/16 v9, 0x0
+
+    sput-wide v9, Lcom/xzodomyx/Rec;->sSkipUs:J
+
+    sput-wide v9, Lcom/xzodomyx/Rec;->sPausePtsUs:J
+
+    const/4 v0, 0x1
+
     new-instance v0, Lcom/xzodomyx/Rec;
 
     invoke-direct {v0}, Lcom/xzodomyx/Rec;-><init>()V
@@ -393,6 +432,10 @@
     const-string v5, "xzo-rec"
 
     invoke-direct {v1, v0, v5}, Ljava/lang/Thread;-><init>(Ljava/lang/Runnable;Ljava/lang/String;)V
+
+    const/16 v5, 0xa               # THREAD_PRIORITY_BACKGROUND
+
+    invoke-virtual {v1, v5}, Ljava/lang/Thread;->setPriority(I)V
 
     invoke-virtual {v1}, Ljava/lang/Thread;->start()V
 
@@ -445,6 +488,49 @@
     move-result-object v0
 
     return-object v0
+.end method
+
+.method public static setPaused(Z)V
+    .locals 4
+
+    :try_start_0
+    sget-boolean v0, Lcom/xzodomyx/Rec;->sRec:Z
+
+    if-eqz v0, :cond_out
+
+    sput-boolean p0, Lcom/xzodomyx/Rec;->sPaused:Z
+
+    if-nez p0, :cond_out
+
+    # coming back into the game: the frames we dropped may have been the
+    # reference frames for what follows, so ask the encoder for a fresh
+    # keyframe rather than letting the next GOP decode into garbage.
+    sget-object v0, Lcom/xzodomyx/Rec;->sCodec:Landroid/media/MediaCodec;
+
+    if-eqz v0, :cond_out
+
+    new-instance v1, Landroid/os/Bundle;
+
+    invoke-direct {v1}, Landroid/os/Bundle;-><init>()V
+
+    const-string v2, "request-sync"
+
+    const/4 v3, 0x0
+
+    invoke-virtual {v1, v2, v3}, Landroid/os/Bundle;->putInt(Ljava/lang/String;I)V
+
+    invoke-virtual {v0, v1}, Landroid/media/MediaCodec;->setParameters(Landroid/os/Bundle;)V
+
+    :cond_out
+    :try_end_0
+    .catch Ljava/lang/Throwable; {:try_start_0 .. :try_end_0} :catch_0
+
+    return-void
+
+    :catch_0
+    move-exception v0
+
+    return-void
 .end method
 
 .method public static stop()V
@@ -730,7 +816,8 @@
     const/4 v1, 0x1
 
     :cond_nosig
-    const-wide/32 v4, 0x2710       # 10ms timeout
+    const-wide/32 v4, 0x186a0      # 100ms: block in the codec instead of
+                                   # waking this thread 100x/second
 
     invoke-virtual {v2, v0, v4, v5}, Landroid/media/MediaCodec;->dequeueOutputBuffer(Landroid/media/MediaCodec$BufferInfo;J)I
 
@@ -795,6 +882,56 @@
     if-eqz v9, :cond_written
 
     if-eqz v6, :cond_written
+
+    # ---- "only the game" ----
+    # Rec.setPaused() is driven by MainActivity onPause/onResume. While the game
+    # is not in front, every frame the display produces is thrown away, so the
+    # launcher, the notification shade, the home screen and any other app never
+    # reach the file. The time spent away is then subtracted from the
+    # presentation timestamps so the .mp4 has no frozen gap.
+    sget-boolean v9, Lcom/xzodomyx/Rec;->sPaused:Z
+
+    if-eqz v9, :cond_notpaused
+
+    iget-wide v10, v0, Landroid/media/MediaCodec$BufferInfo;->presentationTimeUs:J
+
+    sput-wide v10, Lcom/xzodomyx/Rec;->sPausePtsUs:J
+
+    const/4 v9, 0x1
+
+    sput-boolean v9, Lcom/xzodomyx/Rec;->sGap:Z
+
+    goto :cond_written
+
+    :cond_notpaused
+    sget-boolean v9, Lcom/xzodomyx/Rec;->sGap:Z
+
+    if-eqz v9, :cond_nogap
+
+    const/4 v9, 0x0
+
+    sput-boolean v9, Lcom/xzodomyx/Rec;->sGap:Z
+
+    iget-wide v10, v0, Landroid/media/MediaCodec$BufferInfo;->presentationTimeUs:J
+
+    sget-wide v4, Lcom/xzodomyx/Rec;->sPausePtsUs:J
+
+    sub-long/2addr v10, v4
+
+    sget-wide v4, Lcom/xzodomyx/Rec;->sSkipUs:J
+
+    add-long/2addr v4, v10
+
+    sput-wide v4, Lcom/xzodomyx/Rec;->sSkipUs:J
+
+    :cond_nogap
+    iget-wide v10, v0, Landroid/media/MediaCodec$BufferInfo;->presentationTimeUs:J
+
+    sget-wide v4, Lcom/xzodomyx/Rec;->sSkipUs:J
+
+    sub-long/2addr v10, v4
+
+    iput-wide v10, v0, Landroid/media/MediaCodec$BufferInfo;->presentationTimeUs:J
 
     iget v9, v0, Landroid/media/MediaCodec$BufferInfo;->offset:I
 

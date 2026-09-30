@@ -5,6 +5,41 @@ Every entry was checked with `tools/verify.py` before being committed.
 
 ---
 
+## Recorder — lag reduction, and capture limited to the game
+
+**Not done, on purpose: frame-by-frame capture with FFmpeg.** It was requested, but it would make
+lag worse. Per-frame grabbing means `glReadPixels` on the game's render thread, which flushes the
+GPU pipeline and copies ~2 MB per frame into CPU memory; FFmpeg would then encode in software on
+the same cores the game needs. The current path never touches the CPU with pixel data - it feeds
+the hardware H.264 encoder over a Surface. Details in `docs/04-FEATURES-A-E.md`.
+
+Lag attacked where it actually originates:
+
+- `i-frame-interval` 1s -> 5s (a keyframe every second was the single biggest waste)
+- drain thread moved to background priority so it stops competing with the game's render thread
+- `dequeueOutputBuffer` timeout 10ms -> 100ms; it was waking 100x/second to find nothing
+- new **Low-lag recording** launcher toggle (on by default): caps encoder input at 854px
+- `repeat-previous-frame-after` set to 200ms so a static screen doesn't leave timing gaps
+
+**Capture is now limited to the game.** API 21 has no per-window capture, so instead every frame
+produced while the game is not in the foreground is dropped: `onPause` pauses the capture,
+`onResume` resumes it. The home screen, the notification shade and other apps never reach the
+file. The away-time is subtracted from the presentation timestamps so the footage joins up with no
+frozen gap, and a keyframe is requested on resume so the join decodes cleanly.
+
+Leaving the game now pauses rather than stops. Stop is the REC button or the notification.
+
+Also fixed while wiring this: `showRec()` gained an `isRecording()` guard, without which returning
+to the game mid-capture would have put the REC button back on screen and into the video.
+
+`verify.py` gains `3c. recorder semantics` - 12 checks read the shipped dex and assert the encoder
+settings and the pause/stop wiring. During development that wiring inverted itself (the REC button
+paused, leaving the game stopped); this check is what caught it.
+
+`tools/build.sh` now re-runs `bootstrap.sh` automatically when the sandbox has wiped the toolchain.
+
+---
+
 ## Fix — the REC button never appeared
 
 The previously published build shipped a real defect: three ordering bugs in `Hud.attach()` meant

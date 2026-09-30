@@ -34,6 +34,8 @@
 
 .field private mWake:Landroid/widget/CheckBox;
 
+.field private mLowLag:Landroid/widget/CheckBox;
+
 .field private mRec:Landroid/widget/CheckBox;
 
 .field private mProjCode:I
@@ -550,6 +552,37 @@
     invoke-virtual {v8, v9}, Landroid/widget/CheckBox;->setChecked(Z)V
 
     iput-object v8, p0, Lcom/xzodomyx/LauncherActivity;->mRec:Landroid/widget/CheckBox;
+
+    invoke-virtual {v7, v8}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
+
+    # ---- low-lag recording ----
+    new-instance v8, Landroid/widget/CheckBox;
+
+    invoke-direct {v8, p0}, Landroid/widget/CheckBox;-><init>(Landroid/content/Context;)V
+
+    const-string v9, "Low-lag recording (854px, smaller file)"
+
+    invoke-virtual {v8, v9}, Landroid/widget/CheckBox;->setText(Ljava/lang/CharSequence;)V
+
+    const v9, -0x19120d
+
+    invoke-virtual {v8, v9}, Landroid/widget/CheckBox;->setTextColor(I)V
+
+    invoke-direct {p0}, Lcom/xzodomyx/LauncherActivity;->prefs()Landroid/content/SharedPreferences;
+
+    move-result-object v9
+
+    const-string v10, "rec_lowlag"
+
+    const/4 v11, 0x1
+
+    invoke-interface {v9, v10, v11}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z
+
+    move-result v9
+
+    invoke-virtual {v8, v9}, Landroid/widget/CheckBox;->setChecked(Z)V
+
+    iput-object v8, p0, Lcom/xzodomyx/LauncherActivity;->mLowLag:Landroid/widget/CheckBox;
 
     invoke-virtual {v7, v8}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
 
@@ -1140,6 +1173,18 @@
     const-string v2, "rec_enabled"
 
     iget-object v3, p0, Lcom/xzodomyx/LauncherActivity;->mRec:Landroid/widget/CheckBox;
+
+    invoke-virtual {v3}, Landroid/widget/CheckBox;->isChecked()Z
+
+    move-result v3
+
+    invoke-interface {v1, v2, v3}, Landroid/content/SharedPreferences$Editor;->putBoolean(Ljava/lang/String;Z)Landroid/content/SharedPreferences$Editor;
+
+    move-result-object v1
+
+    const-string v2, "rec_lowlag"
+
+    iget-object v3, p0, Lcom/xzodomyx/LauncherActivity;->mLowLag:Landroid/widget/CheckBox;
 
     invoke-virtual {v3}, Landroid/widget/CheckBox;->isChecked()Z
 

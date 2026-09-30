@@ -127,6 +127,35 @@
     # ---- Feature A: hand the MediaProjection consent captured by the launcher
     # ---- to the recorder, and put the REC button on screen.
     :try_start_1
+    # Low-lag mode caps the encoder input width. Smaller input means both a
+    # cheaper extra compositor pass for the VirtualDisplay and less work for
+    # the hardware encoder, which is what actually costs frames on an
+    # API 21-era GPU.
+    const-string v3, "rec_lowlag"
+
+    const/4 v4, 0x0
+
+    invoke-interface {v0, v3, v4}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z
+
+    move-result v3
+
+    if-eqz v3, :cond_nolow
+
+    const/16 v3, 0x356             # 854 px wide
+
+    goto :goto_cap
+
+    :cond_nolow
+    const/16 v3, 0x500             # 1280 px wide
+
+    :goto_cap
+    sput v3, Lcom/xzodomyx/Rec;->sMaxW:I
+
+    # Back in the game: resume capturing (no-op when not recording).
+    const/4 v3, 0x0
+
+    invoke-static {v3}, Lcom/xzodomyx/Rec;->setPaused(Z)V
+
     invoke-virtual {p0}, Landroid/app/Activity;->getIntent()Landroid/content/Intent;
 
     move-result-object v3
@@ -321,6 +350,15 @@
     .locals 5
 
     :try_start_0
+    # Never re-show the button while a capture is running: coming back into the
+    # game rebuilds the HUD, and without this the button would reappear mid
+    # recording and be composited straight into the video.
+    invoke-static {}, Lcom/xzodomyx/Rec;->isRecording()Z
+
+    move-result v0
+
+    if-nez v0, :cond_out
+
     sget-object v0, Lcom/xzodomyx/Hud;->sRecPopup:Landroid/widget/PopupWindow;
 
     if-eqz v0, :cond_out
@@ -431,7 +469,13 @@
 
     :goto_1
     :try_start_2
-    invoke-static {}, Lcom/xzodomyx/Rec;->stop()V
+    # Leaving the game PAUSES the capture instead of stopping it: frames
+    # produced while we are away are dropped, so the launcher, the shade, the
+    # home screen and other apps never reach the file. Stop is the REC button
+    # or the notification.
+    const/4 v0, 0x1
+
+    invoke-static {v0}, Lcom/xzodomyx/Rec;->setPaused(Z)V
 
     sget-object v0, Lcom/xzodomyx/Hud;->sRecPopup:Landroid/widget/PopupWindow;
 
